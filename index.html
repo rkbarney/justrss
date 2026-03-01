@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0d0d0d">
+  <meta name="description" content="RSS Reader - Your feed, your control. Subscribe to blogs and read without algorithms.">
+  <title>RSS Reader</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Header -->
+    <header class="app-header">
+      <button type="button" id="btn-back" class="icon-btn" aria-label="Back" hidden></button>
+      <h1 class="app-title" id="view-title">All Articles</h1>
+      <button type="button" id="btn-refresh" class="icon-btn" aria-label="Refresh feeds"></button>
+    </header>
+
+    <!-- Main content areas -->
+    <main id="main" class="main">
+      <!-- All Articles (river of news) -->
+      <section id="view-all" class="view view-active">
+        <div id="pull-indicator" class="pull-indicator"></div>
+        <div id="article-list" class="article-list" role="list"></div>
+        <div id="empty-state" class="empty-state" hidden>
+          <p class="empty-title">No feeds yet</p>
+          <p class="empty-text">Add your first feed to see articles here.</p>
+          <a href="#feeds" class="btn-primary">Add a feed</a>
+        </div>
+        <div id="loading-articles" class="loading" hidden>Loading…</div>
+      </section>
+
+      <!-- Feeds list -->
+      <section id="view-feeds" class="view">
+        <div class="feeds-toolbar">
+          <button type="button" id="btn-add-feed-top" class="btn-primary">+ Add feed</button>
+        </div>
+        <div id="feed-list" class="feed-list" role="list"></div>
+        <div id="empty-feeds" class="empty-state" hidden>
+          <p class="empty-title">No feeds</p>
+          <p class="empty-text">Paste a blog URL or RSS feed to get started.</p>
+          <button type="button" id="btn-add-feed" class="btn-primary">Add your first feed</button>
+        </div>
+        <div id="add-feed-form" class="add-feed-form" hidden>
+          <label for="feed-url">RSS feed or website URL</label>
+          <input type="url" id="feed-url" placeholder="https://example.com/feed or https://example.com" autocomplete="url">
+          <p id="feed-url-hint" class="hint"></p>
+          <div class="form-actions">
+            <button type="button" id="btn-cancel-feed">Cancel</button>
+            <button type="button" id="btn-save-feed" class="btn-primary">Add feed</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Starred -->
+      <section id="view-starred" class="view">
+        <div id="starred-list" class="article-list" role="list"></div>
+        <div id="empty-starred" class="empty-state" hidden>
+          <p class="empty-title">No starred articles</p>
+          <p class="empty-text">Swipe right on an article to star it.</p>
+        </div>
+      </section>
+
+      <!-- Settings -->
+      <section id="view-settings" class="view">
+        <div class="settings-list">
+          <div class="setting-row">
+            <span>Appearance</span>
+            <select id="setting-theme" aria-label="Theme">
+              <option value="auto">System</option>
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+            </select>
+          </div>
+          <div class="setting-row">
+            <span>Refresh interval</span>
+            <select id="setting-refresh" aria-label="Refresh interval">
+              <option value="15">15 min</option>
+              <option value="30">30 min</option>
+              <option value="60">1 hour</option>
+              <option value="0">Manual only</option>
+            </select>
+          </div>
+          <div class="setting-row">
+            <span>Article font size</span>
+            <select id="setting-font-size" aria-label="Font size">
+              <option value="16">Small</option>
+              <option value="18" selected>Medium</option>
+              <option value="20">Large</option>
+            </select>
+          </div>
+          <div class="setting-row">
+            <span>Feed proxy (CORS)</span>
+            <select id="setting-proxy" aria-label="CORS proxy">
+              <option value="https://api.allorigins.win/raw?url=">AllOrigins</option>
+              <option value="https://api.rss2json.com/v1/api.json?rss_url=">RSS2JSON</option>
+            </select>
+          </div>
+          <div class="setting-actions">
+            <button type="button" id="btn-export-opml" class="btn-secondary">Export subscriptions (OPML)</button>
+            <button type="button" id="btn-import-opml" class="btn-secondary">Import subscriptions (OPML)</button>
+            <input type="file" id="input-opml" accept=".opml,.xml" hidden>
+            <button type="button" id="btn-clear-data" class="btn-danger">Clear all data</button>
+          </div>
+        </div>
+        <div class="install-prompt" id="install-prompt" hidden>
+          <p>Add to home screen to use offline and like an app.</p>
+          <button type="button" id="btn-install">Add to Home Screen</button>
+        </div>
+      </section>
+
+      <!-- Article reader -->
+      <section id="view-article" class="view view-article">
+        <article id="article-content" class="article-content">
+          <h1 id="article-title"></h1>
+          <div id="article-meta" class="article-meta"></div>
+          <div id="article-body" class="article-body"></div>
+          <div class="article-actions">
+            <a id="article-link" href="#" target="_blank" rel="noopener" class="btn-secondary">Open in browser</a>
+            <button type="button" id="btn-share" class="btn-secondary">Share</button>
+          </div>
+          <nav class="article-nav">
+            <button type="button" id="btn-prev-article" class="btn-secondary">Previous</button>
+            <button type="button" id="btn-next-article" class="btn-secondary">Next</button>
+          </nav>
+        </article>
+      </section>
+    </main>
+
+    <!-- Bottom nav -->
+    <nav class="bottom-nav" aria-label="Main">
+      <a href="#all" class="nav-item nav-active" data-view="all" aria-current="page">
+        <span class="nav-label">All</span>
+      </a>
+      <a href="#feeds" class="nav-item" data-view="feeds">
+        <span class="nav-label">Feeds</span>
+      </a>
+      <a href="#starred" class="nav-item" data-view="starred">
+        <span class="nav-label">Starred</span>
+      </a>
+      <a href="#settings" class="nav-item" data-view="settings">
+        <span class="nav-label">Settings</span>
+      </a>
+    </nav>
+  </div>
+
+  <script src="js/storage.js"></script>
+  <script src="js/feed-parser.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
