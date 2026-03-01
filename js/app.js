@@ -44,21 +44,22 @@
     const proxy = settings.proxy || 'https://api.allorigins.win/raw?url=';
     const loading = document.getElementById('loading-articles');
     if (loading) loading.hidden = false;
-
-    for (const feed of feeds) {
-      try {
-        const parsed = await FeedParser.fetchAndParse(feed.url, proxy);
-        await Storage.upsertArticles(feed.id, parsed.items);
-        const updates = { ...feed };
-        if (parsed.title && !feed.title) updates.title = parsed.title;
-        updates.lastUpdate = Date.now();
-        await Storage.updateFeed(updates);
-      } catch (e) {
-        console.warn('Feed refresh failed:', feed.url, e);
+    try {
+      for (const feed of feeds) {
+        try {
+          const parsed = await FeedParser.fetchAndParse(feed.url, proxy);
+          await Storage.upsertArticles(feed.id, parsed.items);
+          const updates = { ...feed };
+          if (parsed.title && !feed.title) updates.title = parsed.title;
+          updates.lastUpdate = Date.now();
+          await Storage.updateFeed(updates);
+        } catch (e) {
+          console.warn('Feed refresh failed:', feed.url, e);
+        }
       }
+    } finally {
+      if (loading) loading.hidden = true;
     }
-
-    if (loading) loading.hidden = true;
     await renderAll();
     scheduleRefresh();
   }
@@ -72,6 +73,8 @@
   }
 
   async function renderAll() {
+    const loading = document.getElementById('loading-articles');
+    if (loading) loading.hidden = true;
     await loadFeeds();
     const limit = Storage.getSettings().postsPerPage || 15;
     const [articles, unreadCounts] = await Promise.all([
