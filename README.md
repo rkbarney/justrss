@@ -20,7 +20,7 @@ This app uses **no dedicated servers**. Everything runs in the browser. Feeds ar
 - **Add feeds** – Paste a blog URL or RSS feed; the app discovers the feed when possible
 - **Star articles** – Swipe right to star, swipe left to mark read
 - **Offline** – Service worker caches the app and articles for offline reading
-- **Install** – Add to home screen on iOS/Android for an app-like experience
+- **Install** – Add to home screen on iOS/Android for an app-like experience. After we deploy updates, **close the app and reopen it** (or pull-to-refresh on the main list) to get the latest version; the app is cached for offline use.
 - **OPML** – Export and import subscriptions (Settings)
 - **Dark/Light** – Follows system preference or set manually in Settings
 

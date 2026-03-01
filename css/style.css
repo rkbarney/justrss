@@ -73,15 +73,22 @@ body {
   justify-self: start;
 }
 
+.app-header-left {
+  justify-self: start;
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.app-header-left .icon-btn[hidden] {
+  display: none;
+}
+
 .app-header-actions {
   justify-self: end;
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.app-header .btn-header-install[hidden] {
-  display: none;
 }
 
 .app-title {
@@ -118,7 +125,12 @@ body {
 }
 
 #btn-back::before {
-  content: "<";
+  content: "‹";
+  font-size: 1.25rem;
+}
+
+.btn-install-icon::before {
+  content: "⬇";
   font-size: 1.25rem;
 }
 
