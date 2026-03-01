@@ -125,8 +125,10 @@
           <div class="setting-actions">
             <button type="button" id="btn-export-opml" class="btn-secondary">Export subscriptions (OPML)</button>
             <button type="button" id="btn-import-opml" class="btn-secondary">Import subscriptions (OPML)</button>
+            <p class="hint">On iPhone, if files are grayed out, open the file in Files first or choose “Browse” and pick from a folder.</p>
             <p id="import-status" class="hint" aria-live="polite"></p>
-            <input type="file" id="input-opml" accept=".opml,.xml,.txt" hidden>
+            <!-- accept broadened for iOS: Downloads often gray out when type doesn't match -->
+<input type="file" id="input-opml" accept=".opml,.xml,.txt,application/xml,text/xml,text/plain,application/opml+xml,*/*" hidden>
             <button type="button" id="btn-clear-data" class="btn-danger">Clear all data</button>
           </div>
         </div>
