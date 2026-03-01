@@ -22,7 +22,7 @@
   --text: #ddd;
   --text-muted: #999;
   --accent: #6eb3ff;
-  --accent-visited: #a78bfa;
+  --accent-visited: #b89aff;
   --border: #444;
 }
 
@@ -73,8 +73,15 @@ body {
   justify-self: start;
 }
 
-.app-header .icon-btn:last-of-type {
+.app-header-actions {
   justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.app-header .btn-header-install[hidden] {
+  display: none;
 }
 
 .app-title {
@@ -437,6 +444,56 @@ body {
   border-color: var(--text);
 }
 
+.add-feed-pending-list {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.add-feed-pending-card {
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.add-feed-pending-label {
+  margin: 0 0 8px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  word-break: break-all;
+}
+
+.add-feed-pending-status {
+  margin: 0 0 8px;
+}
+
+.add-feed-pending-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.youtube-choice-btn {
+  width: 100%;
+  text-align: left;
+}
+
+.youtube-playlists-container {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.youtube-playlists-container .youtube-choices-title {
+  margin-bottom: 8px;
+}
+
+.youtube-playlists-container .youtube-choice-btn {
+  margin-bottom: 6px;
+}
+
 /* Settings */
 .settings-list {
   padding: var(--padding-mobile);
@@ -480,10 +537,14 @@ body {
   width: 100%;
 }
 
-.about-section {
-  margin: 24px var(--padding-mobile) 0;
-  padding: 16px 0;
-  border-top: 1px solid var(--border);
+/* About view */
+.about-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: var(--padding-mobile);
+  padding-bottom: 24px;
 }
 
 .about-title {
@@ -508,20 +569,44 @@ body {
   color: var(--text-muted);
 }
 
-.about-text:last-child {
+.about-text:last-of-type {
+  margin-bottom: 24px;
+}
+
+.install-app-card {
+  padding: 16px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  margin-bottom: 24px;
+}
+
+.install-app-title {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+  font-weight: bold;
+  color: var(--text);
+}
+
+.install-app-text {
+  margin: 0 0 12px;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.install-prompt-inner {
+  margin-bottom: 12px;
+}
+
+.install-prompt-inner[hidden] {
   margin-bottom: 0;
 }
 
-.install-prompt {
-  margin: 16px var(--padding-mobile);
-  padding: 12px;
-  border: 1px solid var(--border);
-}
-
-.install-prompt p {
-  margin: 0 0 8px;
-  color: var(--text);
-  font-size: 0.9rem;
+.install-app-manual {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--text-muted);
 }
 
 /* Article reader */
@@ -583,6 +668,15 @@ body {
   margin-top: 24px;
   padding-top: 16px;
   border-top: 1px solid var(--border);
+}
+
+.load-more-wrap {
+  padding: 16px;
+  text-align: center;
+}
+
+.load-more-wrap .btn-secondary {
+  min-width: 120px;
 }
 
 .loading {

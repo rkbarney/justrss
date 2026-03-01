@@ -1,8 +1,18 @@
 # RSS Reader PWA
 
-A mobile-first RSS reader that runs entirely in your browser. No backend, no account, no algorithm. You own your feed.
+A mobile-first RSS reader that runs **entirely in your browser**. No backend, no account, no algorithm. You own your feed.
 
 Central idea: **browsing should be intentional, not addictive.** Plain design on purpose; no engagement tricks.
+
+## Intentionally lightweight
+
+This app uses **no dedicated servers**. Everything runs in the browser. Feeds are fetched via public CORS proxies when needed, and data lives only on your device (IndexedDB + localStorage). The trade-off: some operations (e.g. resolving a YouTube @handle) can be a bit slower than services that run their own backend.
+
+**Why do it this way?**
+
+1. **No lock-in** — Your subscriptions are yours. Export OPML anytime. No account to lose, no vendor to depend on.
+2. **No server costs, lighter footprint** — Nothing to host or scale. Fewer machines running 24/7 is better for the planet.
+3. **It's just a static website** — Clone the repo, push to GitHub Pages (or any host), and you have your own reader. Fork it, change it, make it yours.
 
 ## Features
 
@@ -17,10 +27,10 @@ Central idea: **browsing should be intentional, not addictive.** Plain design on
 ## How to run
 
 1. Serve the project over HTTP (required for service worker and CORS).
-   - **Local:** `npx serve .` or `python3 -m http.server 8080` from the project root
+   - **Local:** `python3 -m http.server 8080` from the project root
    - **Deploy:** Push to GitHub and enable GitHub Pages, or use Netlify/Vercel (point to the repo root)
 
-2. Open the app URL in your browser (e.g. `http://localhost:3000`).
+2. Open the app URL in your browser: **http://localhost:8080**
 
 3. Add a feed: go to **Feeds** → “Add your first feed” (or add from the empty state) → paste a blog or RSS URL → Add feed.
 
@@ -28,7 +38,8 @@ Central idea: **browsing should be intentional, not addictive.** Plain design on
 
 - You can paste either a **website URL** (e.g. `https://waitbutwhy.com`) or a **direct feed URL** (e.g. `https://waitbutwhy.com/feed`).
 - If you paste a website URL, the app will try to discover the RSS/Atom link from the page.
-- If a feed fails to load, try the other **CORS proxy** in Settings (e.g. AllOrigins vs RSS2JSON).
+- **YouTube:** Paste a channel URL (e.g. `youtube.com/@channel` or `youtube.com/channel/UC...`). The app resolves @handles to channel ID by trying the [Piped](https://docs.piped.video/docs/api-documentation/) API first (fast), then CORS proxies if needed. Feed options (All, Videos, Shorts, Live, playlists) are built from the channel ID; only custom playlists require a channel-page fetch.
+- If a feed fails to load, try another **CORS proxy** in Settings (e.g. AllOrigins, CorsProxy.io, RSS2JSON).
 
 ## File structure
 

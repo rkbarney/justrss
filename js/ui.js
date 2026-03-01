@@ -31,11 +31,13 @@ const UI = {
     if (view) view.classList.add('view-active');
 
     const title = document.getElementById('view-title');
-    const titles = { all: 'All Articles', feeds: 'Feeds', starred: 'Starred', settings: 'Settings', article: '' };
+    const titles = { all: 'JustRSS', feeds: 'Feeds', starred: 'Starred', settings: 'Settings', about: 'About', article: '' };
     title.textContent = titles[viewId] || 'Article';
 
     const backBtn = document.getElementById('btn-back');
     backBtn.hidden = viewId !== 'article';
+    const installBtn = document.getElementById('btn-install-main');
+    if (installBtn) installBtn.hidden = viewId !== 'all';
 
     document.querySelectorAll('.nav-item').forEach((n) => {
       n.classList.toggle('nav-active', n.getAttribute('data-view') === viewId);
@@ -43,7 +45,7 @@ const UI = {
     });
 
     if (viewId === 'article') return;
-    const scrollEl = view?.querySelector('.article-list, .feed-list, .settings-list');
+    const scrollEl = view?.querySelector('.article-list, .feed-list, .settings-list, .about-content');
     if (scrollEl && UI.scrollPositions[viewId] != null) {
       scrollEl.scrollTop = UI.scrollPositions[viewId];
     }
@@ -51,7 +53,7 @@ const UI = {
 
   saveScroll(viewId) {
     const view = document.getElementById(`view-${viewId}`);
-    const scrollEl = view?.querySelector('.article-list, .feed-list');
+    const scrollEl = view?.querySelector('.article-list, .feed-list, .about-content');
     if (scrollEl) UI.scrollPositions[viewId] = scrollEl.scrollTop;
   },
 
@@ -60,9 +62,14 @@ const UI = {
     const d = new Date(ts);
     const now = new Date();
     const diff = now - d;
-    if (diff < 86400000) return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-    if (diff < 604800000) return d.toLocaleDateString([], { weekday: 'short' });
-    return d.toLocaleDateString([], { month: 'short', day: 'numeric', year: d.getFullYear() !== now.getFullYear() ? 'numeric' : undefined });
+    const timeStr = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    const sameDay = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+    if (sameDay(d, now)) return 'Today ' + timeStr;
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (sameDay(d, yesterday)) return 'Yesterday ' + timeStr;
+    const dateStr = d.toLocaleDateString([], { month: 'short', day: 'numeric', year: d.getFullYear() !== now.getFullYear() ? 'numeric' : undefined });
+    return dateStr + ' ' + timeStr;
   },
 
   escapeHtml(s) {
@@ -83,6 +90,10 @@ const UI = {
 
     articles.forEach((a) => {
       const feed = feedMap[a.feedId] || {};
+      const metaParts = [UI.escapeHtml(feed.title || 'Feed'), UI.formatDate(a.published)];
+      if (a.durationSeconds && window.FeedParser && typeof window.FeedParser.formatDuration === 'function') {
+        metaParts.push(window.FeedParser.formatDuration(a.durationSeconds));
+      }
       const el = document.createElement('div');
       el.className = 'article-item' + (a.read ? '' : ' unread') + (a.starred ? ' starred' : '');
       el.setAttribute('role', 'listitem');
@@ -92,7 +103,7 @@ const UI = {
         <span class="article-item-swipe-hint right" aria-hidden="true">★</span>
         <span class="article-item-star" aria-hidden="true">★</span>
         <h2 class="article-item-title">${UI.escapeHtml(a.title)}</h2>
-        <div class="article-item-meta">${UI.escapeHtml(feed.title || 'Feed')} · ${UI.formatDate(a.published)}</div>
+        <div class="article-item-meta">${metaParts.join(' · ')}</div>
       `;
       container.appendChild(el);
     });

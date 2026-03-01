@@ -125,7 +125,9 @@ async function getArticles(options = {}) {
       if (options.starredOnly) list = list.filter((a) => a.starred);
       if (options.unreadOnly) list = list.filter((a) => !a.read);
       list.sort((a, b) => (b.published || 0) - (a.published || 0));
-      if (options.limit) list = list.slice(0, options.limit);
+      const offset = options.offset || 0;
+      if (options.limit != null) list = list.slice(offset, offset + options.limit);
+      else if (offset > 0) list = list.slice(offset);
       resolve(list);
     };
     req.onerror = () => reject(req.error);
@@ -162,6 +164,7 @@ async function upsertArticles(feedId, items) {
       published: item.published || 0,
       author: item.author,
       image: item.image,
+      durationSeconds: item.durationSeconds,
       read: existingIds.has(id) ? (existing.find((a) => a.id === id)?.read ?? false) : false,
       starred: existingIds.has(id) ? (existing.find((a) => a.id === id)?.starred ?? false) : false,
     };
@@ -210,6 +213,7 @@ const DEFAULTS = {
   refreshInterval: 30,
   fontSize: 18,
   proxy: 'https://api.allorigins.win/raw?url=',
+  postsPerPage: 15,
 };
 
 function getSettings() {
@@ -246,14 +250,15 @@ function exportOPML(feeds) {
 function parseOPML(xmlText) {
   const parser = new DOMParser();
   const doc = parser.parseFromString(xmlText, 'text/xml');
-  const outlines = doc.querySelectorAll('outline[type="rss"], outline[xmlUrl]');
+  if (doc.querySelector('parsererror')) return [];
+  const outlines = doc.querySelectorAll('outline');
   const feeds = [];
   outlines.forEach((el) => {
-    const url = el.getAttribute('xmlUrl') || el.getAttribute('url');
-    if (url) {
+    const url = el.getAttribute('xmlUrl') || el.getAttribute('xmlurl') || el.getAttribute('url');
+    if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
       feeds.push({
         url,
-        title: el.getAttribute('title') || url,
+        title: el.getAttribute('title') || el.getAttribute('text') || url,
       });
     }
   });

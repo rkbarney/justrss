@@ -1,6 +1,6 @@
 {
-  "name": "RSS Reader",
-  "short_name": "RSS",
+  "name": "JustRSS",
+  "short_name": "JustRSS",
   "description": "Your feed, your control. Subscribe to blogs and read without algorithms.",
   "start_url": "./",
   "scope": "./",

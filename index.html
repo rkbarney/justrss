@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0d0d0d">
   <meta name="description" content="RSS Reader - Your feed, your control. Subscribe to blogs and read without algorithms.">
-  <title>RSS Reader</title>
+  <title>JustRSS</title>
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="css/style.css">
 </head>
@@ -14,8 +14,11 @@
     <!-- Header -->
     <header class="app-header">
       <button type="button" id="btn-back" class="icon-btn" aria-label="Back" hidden></button>
-      <h1 class="app-title" id="view-title">All Articles</h1>
-      <button type="button" id="btn-refresh" class="icon-btn" aria-label="Refresh feeds"></button>
+      <h1 class="app-title" id="view-title">JustRSS</h1>
+      <div class="app-header-actions">
+        <button type="button" id="btn-install-main" class="btn-secondary btn-header-install" aria-label="Install as an app" hidden>Install as an app</button>
+        <button type="button" id="btn-refresh" class="icon-btn" aria-label="Refresh feeds"></button>
+      </div>
     </header>
 
     <!-- Main content areas -->
@@ -24,6 +27,9 @@
       <section id="view-all" class="view view-active">
         <div id="pull-indicator" class="pull-indicator"></div>
         <div id="article-list" class="article-list" role="list"></div>
+        <div id="load-more-all-wrap" class="load-more-wrap" hidden>
+          <button type="button" id="btn-load-more-all" class="btn-secondary">Load more</button>
+        </div>
         <div id="empty-state" class="empty-state" hidden>
           <p class="empty-title">No feeds yet</p>
           <p class="empty-philosophy">Browsing should be intentional, not addictive.</p>
@@ -50,7 +56,8 @@
           <input type="url" id="feed-url" placeholder="e.g. blog.substack.com or youtube.com/@channel" autocomplete="url">
           <p class="hint hint-sources">Substack and YouTube: paste the blog or channel URL (we’ll find the feed). Any RSS/Atom URL works too.</p>
           <p id="feed-url-hint" class="hint"></p>
-          <div class="form-actions">
+          <div id="add-feed-pending-list" class="add-feed-pending-list" aria-live="polite"></div>
+          <div class="form-actions" id="add-feed-form-actions">
             <button type="button" id="btn-cancel-feed">Cancel</button>
             <button type="button" id="btn-save-feed" class="btn-primary">Add feed</button>
           </div>
@@ -60,6 +67,9 @@
       <!-- Starred -->
       <section id="view-starred" class="view">
         <div id="starred-list" class="article-list" role="list"></div>
+        <div id="load-more-starred-wrap" class="load-more-wrap" hidden>
+          <button type="button" id="btn-load-more-starred" class="btn-secondary">Load more</button>
+        </div>
         <div id="empty-starred" class="empty-state" hidden>
           <p class="empty-title">No starred articles</p>
           <p class="empty-text">Swipe right on an article to star it.</p>
@@ -87,6 +97,16 @@
             </select>
           </div>
           <div class="setting-row">
+            <span>Posts per page</span>
+            <select id="setting-posts-per-page" aria-label="Posts per page">
+              <option value="10">10</option>
+              <option value="15" selected>15</option>
+              <option value="25">25</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+          </div>
+          <div class="setting-row">
             <span>Article font size</span>
             <select id="setting-font-size" aria-label="Font size">
               <option value="16">Small</option>
@@ -98,25 +118,34 @@
             <span>Feed proxy (CORS)</span>
             <select id="setting-proxy" aria-label="CORS proxy">
               <option value="https://api.allorigins.win/raw?url=">AllOrigins</option>
+              <option value="https://corsproxy.io/?url=">CorsProxy.io</option>
               <option value="https://api.rss2json.com/v1/api.json?rss_url=">RSS2JSON</option>
             </select>
           </div>
           <div class="setting-actions">
             <button type="button" id="btn-export-opml" class="btn-secondary">Export subscriptions (OPML)</button>
             <button type="button" id="btn-import-opml" class="btn-secondary">Import subscriptions (OPML)</button>
-            <input type="file" id="input-opml" accept=".opml,.xml" hidden>
+            <p id="import-status" class="hint" aria-live="polite"></p>
+            <input type="file" id="input-opml" accept=".opml,.xml,.txt" hidden>
             <button type="button" id="btn-clear-data" class="btn-danger">Clear all data</button>
           </div>
         </div>
-        <div class="about-section">
+      </section>
+
+      <!-- About -->
+      <section id="view-about" class="view">
+        <div class="about-content">
+          <div class="install-app-card">
+            <h3 class="install-app-title">Install as an app</h3>
+            <p class="install-app-text">Add JustRSS to your phone or tablet for quick access and offline reading.</p>
+            <div class="install-prompt-inner" id="install-prompt" hidden>
+              <button type="button" id="btn-install" class="btn-primary">Install as an app</button>
+            </div>
+            <p id="install-manual-hint" class="hint install-app-manual">On iPhone/iPad: tap the Share button, then “Add to Home Screen”. On Android: open the browser menu (⋮) and choose “Add to Home screen” or “Install app”.</p>
+          </div>
           <h2 class="about-title">About</h2>
-          <p class="about-philosophy">The goal is simple: make browsing intentional rather than addictive.</p>
-          <p class="about-text">So: no logins or storage of personal data, no advertising, no algorithmic feeds designed to capture engagement.</p>
-          <p class="about-text">RSS is an open standard. There is no lock-in. You can come and go as you please. Newer, different, better alternatives can be developed—and that's good.</p>
-        </div>
-        <div class="install-prompt" id="install-prompt" hidden>
-          <p>Add to home screen to use offline and like an app.</p>
-          <button type="button" id="btn-install">Add to Home Screen</button>
+          <p class="about-text">This is an intentionally lightweight RSS reader: it runs entirely in your browser with no dedicated servers, so there’s no lock-in, no server costs, and it’s just a static site you can clone and run yourself. The goal is simple—make browsing intentional rather than addictive. No logins, no ads, no algorithmic feeds; your data stays on your device.</p>
+          <p class="about-text"><a href="https://github.com/rkbarney/justrss" target="_blank" rel="noopener noreferrer">Source on GitHub</a> — clone it and make your own. To report a bug or suggest a change, <a href="https://github.com/rkbarney/justrss/issues" target="_blank" rel="noopener noreferrer">open an issue</a> or <a href="https://github.com/rkbarney/justrss/pulls" target="_blank" rel="noopener noreferrer">submit a pull request</a>.</p>
         </div>
       </section>
 
@@ -151,6 +180,9 @@
       </a>
       <a href="#settings" class="nav-item" data-view="settings">
         <span class="nav-label">Settings</span>
+      </a>
+      <a href="#about" class="nav-item" data-view="about">
+        <span class="nav-label">About</span>
       </a>
     </nav>
   </div>
