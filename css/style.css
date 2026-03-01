@@ -54,14 +54,14 @@ body {
   flex-direction: column;
 }
 
-/* Header */
+/* Header - grid so title stays centered with/without back button */
 .app-header {
   position: sticky;
   top: 0;
   z-index: 10;
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
   min-height: var(--touch-min);
   padding: 6px var(--padding-mobile);
   background: var(--bg-elevated);
@@ -69,12 +69,20 @@ body {
   flex-shrink: 0;
 }
 
+.app-header .icon-btn:first-of-type {
+  justify-self: start;
+}
+
+.app-header .icon-btn:last-of-type {
+  justify-self: end;
+}
+
 .app-title {
   margin: 0;
   font-size: 1rem;
   font-weight: bold;
-  flex: 1;
   text-align: center;
+  grid-column: 2;
 }
 
 .icon-btn {
@@ -308,6 +316,13 @@ body {
   color: var(--text);
 }
 
+.empty-philosophy {
+  font-size: 1rem;
+  font-weight: bold;
+  margin: 0 0 10px;
+  color: var(--text);
+}
+
 .empty-text {
   color: var(--text-muted);
   margin: 0 0 16px;
@@ -463,6 +478,38 @@ body {
 .setting-actions .btn-secondary,
 .setting-actions .btn-danger {
   width: 100%;
+}
+
+.about-section {
+  margin: 24px var(--padding-mobile) 0;
+  padding: 16px 0;
+  border-top: 1px solid var(--border);
+}
+
+.about-title {
+  margin: 0 0 10px;
+  font-size: 1rem;
+  font-weight: bold;
+  color: var(--text);
+}
+
+.about-philosophy {
+  margin: 0 0 12px;
+  font-size: 1rem;
+  font-weight: bold;
+  line-height: 1.4;
+  color: var(--text);
+}
+
+.about-text {
+  margin: 0 0 10px;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.about-text:last-child {
+  margin-bottom: 0;
 }
 
 .install-prompt {

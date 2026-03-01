@@ -2,7 +2,7 @@
 
 A mobile-first RSS reader that runs entirely in your browser. No backend, no account, no algorithm. You own your feed.
 
-Intentionally plain design (Drudge Report / Craigslist aesthetic)—the internet has gotten too polished; this one sucks a little more on purpose.
+Central idea: **browsing should be intentional, not addictive.** Plain design on purpose; no engagement tricks.
 
 ## Features
 

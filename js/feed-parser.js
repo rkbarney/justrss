@@ -121,6 +121,52 @@ function parseAtom(doc) {
 }
 
 /**
+ * Normalize known site URLs to their RSS/feed URL (Substack, YouTube).
+ * Returns the feed URL if we can derive it, otherwise null.
+ */
+async function normalizeInputToFeedUrl(inputUrl, proxyBase) {
+  let url;
+  try {
+    url = new URL(inputUrl.startsWith('http') ? inputUrl : 'https://' + inputUrl);
+  } catch {
+    return null;
+  }
+  const host = url.hostname.toLowerCase();
+
+  // Substack: https://anything.substack.com → https://anything.substack.com/feed
+  if (host.endsWith('.substack.com')) {
+    return url.origin + '/feed';
+  }
+
+  // YouTube: channel page or feed-style URL
+  if (host === 'www.youtube.com' || host === 'youtube.com' || host === 'm.youtube.com') {
+    const path = url.pathname;
+    // /channel/UCxxxxxxxxxxxxxxxxxxxxxx → feed
+    const channelMatch = path.match(/^\/channel\/(UC[\w-]{22})/i);
+    if (channelMatch) {
+      return `https://www.youtube.com/feeds/videos.xml?channel_id=${channelMatch[1]}`;
+    }
+    // /@handle or /c/name or /user/name → fetch page and find channel ID
+    const handleMatch = path.match(/^\/(@[\w.-]+)/);
+    const cMatch = path.match(/^\/c\/([\w.-]+)/);
+    const userMatch = path.match(/^\/user\/([\w.-]+)/);
+    if (handleMatch || cMatch || userMatch) {
+      const pageUrl = url.origin + path;
+      const fullUrl = getProxyUrl(proxyBase, pageUrl);
+      const res = await fetch(fullUrl);
+      const html = await res.text();
+      const channelIdMatch = html.match(/"channelId"\s*:\s*"(UC[\w-]{22})"/) ||
+        html.match(/youtube\.com\/channel\/(UC[\w-]{22})/);
+      if (channelIdMatch) {
+        return `https://www.youtube.com/feeds/videos.xml?channel_id=${channelIdMatch[1]}`;
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
  * Resolve feed URL from a website URL (discover RSS/Atom link).
  */
 async function discoverFeedUrl(websiteUrl, proxyBase) {
@@ -159,5 +205,6 @@ window.FeedParser = {
   fetchFeed,
   fetchAndParse,
   discoverFeedUrl,
+  normalizeInputToFeedUrl,
   parseOPML: () => {}, // use Storage.parseOPML
 };

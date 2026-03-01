@@ -26,7 +26,8 @@
         <div id="article-list" class="article-list" role="list"></div>
         <div id="empty-state" class="empty-state" hidden>
           <p class="empty-title">No feeds yet</p>
-          <p class="empty-text">Add your first feed to see articles here.</p>
+          <p class="empty-philosophy">Browsing should be intentional, not addictive.</p>
+          <p class="empty-text">This reader is built around that idea: your feeds, your attention. No engagement tricks, no lock-in.</p>
           <a href="#feeds" class="btn-primary">Add a feed</a>
         </div>
         <div id="loading-articles" class="loading" hidden>Loading…</div>
@@ -40,12 +41,14 @@
         <div id="feed-list" class="feed-list" role="list"></div>
         <div id="empty-feeds" class="empty-state" hidden>
           <p class="empty-title">No feeds</p>
-          <p class="empty-text">Paste a blog URL or RSS feed to get started.</p>
+          <p class="empty-philosophy">Browsing should be intentional, not addictive.</p>
+          <p class="empty-text">Subscribe to what you choose. No algorithms, no infinite scroll.</p>
           <button type="button" id="btn-add-feed" class="btn-primary">Add your first feed</button>
         </div>
         <div id="add-feed-form" class="add-feed-form" hidden>
           <label for="feed-url">RSS feed or website URL</label>
-          <input type="url" id="feed-url" placeholder="https://example.com/feed or https://example.com" autocomplete="url">
+          <input type="url" id="feed-url" placeholder="e.g. blog.substack.com or youtube.com/@channel" autocomplete="url">
+          <p class="hint hint-sources">Substack and YouTube: paste the blog or channel URL (we’ll find the feed). Any RSS/Atom URL works too.</p>
           <p id="feed-url-hint" class="hint"></p>
           <div class="form-actions">
             <button type="button" id="btn-cancel-feed">Cancel</button>
@@ -104,6 +107,12 @@
             <input type="file" id="input-opml" accept=".opml,.xml" hidden>
             <button type="button" id="btn-clear-data" class="btn-danger">Clear all data</button>
           </div>
+        </div>
+        <div class="about-section">
+          <h2 class="about-title">About</h2>
+          <p class="about-philosophy">The goal is simple: make browsing intentional rather than addictive.</p>
+          <p class="about-text">So: no logins or storage of personal data, no advertising, no algorithmic feeds designed to capture engagement.</p>
+          <p class="about-text">RSS is an open standard. There is no lock-in. You can come and go as you please. Newer, different, better alternatives can be developed—and that's good.</p>
         </div>
         <div class="install-prompt" id="install-prompt" hidden>
           <p>Add to home screen to use offline and like an app.</p>

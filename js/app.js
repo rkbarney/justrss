@@ -160,8 +160,13 @@
 
     let feedUrl = url;
     try {
-      const discovered = await FeedParser.discoverFeedUrl(url, proxy);
-      if (discovered) feedUrl = discovered;
+      const normalized = await FeedParser.normalizeInputToFeedUrl(url, proxy);
+      if (normalized) {
+        feedUrl = normalized;
+      } else {
+        const discovered = await FeedParser.discoverFeedUrl(url, proxy);
+        if (discovered) feedUrl = discovered;
+      }
     } catch (e) {
       // might be direct RSS URL
     }
