@@ -66,18 +66,6 @@
         </div>
       </section>
 
-      <!-- Starred -->
-      <section id="view-starred" class="view">
-        <div id="starred-list" class="article-list" role="list"></div>
-        <div id="load-more-starred-wrap" class="load-more-wrap" hidden>
-          <button type="button" id="btn-load-more-starred" class="btn-secondary">Load more</button>
-        </div>
-        <div id="empty-starred" class="empty-state" hidden>
-          <p class="empty-title">No starred articles</p>
-          <p class="empty-text">Swipe right on an article to star it.</p>
-        </div>
-      </section>
-
       <!-- Settings -->
       <section id="view-settings" class="view">
         <div class="settings-list">
@@ -122,6 +110,13 @@
               <option value="https://api.allorigins.win/raw?url=">AllOrigins</option>
               <option value="https://corsproxy.io/?url=">CorsProxy.io</option>
               <option value="https://api.rss2json.com/v1/api.json?rss_url=">RSS2JSON</option>
+            </select>
+          </div>
+          <div class="setting-row">
+            <span>Feed order</span>
+            <select id="setting-feed-order" aria-label="Feed order">
+              <option value="alphabetical">Alphabetical</option>
+              <option value="recent">Most recent update</option>
             </select>
           </div>
           <div class="setting-actions">
@@ -178,9 +173,6 @@
       </a>
       <a href="#feeds" class="nav-item" data-view="feeds">
         <span class="nav-label">Feeds</span>
-      </a>
-      <a href="#starred" class="nav-item" data-view="starred">
-        <span class="nav-label">Starred</span>
       </a>
       <a href="#settings" class="nav-item" data-view="settings">
         <span class="nav-label">Settings</span>

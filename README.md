@@ -18,7 +18,8 @@ This app uses **no dedicated servers**. Everything runs in the browser. Feeds ar
 
 - **River of news** – All articles from all feeds in one chronological list
 - **Add feeds** – Paste a blog URL or RSS feed; the app discovers the feed when possible
-- **Star articles** – Swipe right to star, swipe left to mark read
+- **Swipe** – On articles: swipe left to mark read. On Feeds list: swipe left to remove (unsubscribe)
+- **Feed order** – Settings: sort feeds alphabetically or by most recent update
 - **Offline** – Service worker caches the app and articles for offline reading
 - **Install** – Add to home screen on iOS/Android for an app-like experience. After we deploy updates, **close the app and reopen it** (or pull-to-refresh on the main list) to get the latest version; the app is cached for offline use.
 - **OPML** – Export and import subscriptions (Settings)
@@ -28,6 +29,7 @@ This app uses **no dedicated servers**. Everything runs in the browser. Feeds ar
 
 1. Serve the project over HTTP (required for service worker and CORS).
    - **Local:** `python3 -m http.server 8080` from the project root
+   
    - **Deploy:** Push to GitHub and enable GitHub Pages, or use Netlify/Vercel (point to the repo root)
 
 2. Open the app URL in your browser: **http://localhost:8080**

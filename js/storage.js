@@ -214,6 +214,7 @@ const DEFAULTS = {
   fontSize: 18,
   proxy: 'https://api.allorigins.win/raw?url=',
   postsPerPage: 15,
+  feedOrder: 'alphabetical',
 };
 
 function getSettings() {

@@ -276,6 +276,7 @@ body {
 
 /* Feed list */
 .feed-item {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -284,6 +285,8 @@ body {
   border-bottom: 1px solid var(--border);
   background: var(--bg-elevated);
   gap: 8px;
+  overflow: hidden;
+  touch-action: pan-y;
 }
 
 .feed-item-info {
@@ -320,6 +323,30 @@ body {
 .feed-item-actions button:hover {
   background: var(--border);
   color: var(--text);
+}
+
+.feed-item-swipe-hint {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  pointer-events: none;
+  transition: transform 0.2s;
+}
+
+.feed-item-swipe-hint.left {
+  left: 0;
+  background: var(--danger-bg, #4a1a1a);
+  color: var(--danger-fg, #e88);
+  transform: translateX(-100%);
+}
+
+.feed-item.swipe-left .feed-item-swipe-hint.left {
+  transform: translateX(0);
 }
 
 /* Empty state */

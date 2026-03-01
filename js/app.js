@@ -11,7 +11,6 @@
   let feedMap = {};
   let refreshTimeout = null;
   let allArticles = [];
-  let starredArticles = [];
 
   function applyTheme() {
     const s = Storage.getSettings();
@@ -21,7 +20,12 @@
 
   async function loadFeeds() {
     feeds = await Storage.getFeeds();
-    feeds.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    const order = Storage.getSettings().feedOrder || 'alphabetical';
+    if (order === 'recent') {
+      feeds.sort((a, b) => (b.lastUpdate || 0) - (a.lastUpdate || 0));
+    } else {
+      feeds.sort((a, b) => ((a.title || a.url || '').toLowerCase()).localeCompare((b.title || b.url || '').toLowerCase()));
+    }
     feedMap = Object.fromEntries(feeds.map((f) => [f.id, f]));
     return feeds;
   }
@@ -38,7 +42,6 @@
   async function refreshAllFeeds() {
     const settings = Storage.getSettings();
     const proxy = settings.proxy || 'https://api.allorigins.win/raw?url=';
-    const list = document.getElementById('article-list');
     const loading = document.getElementById('loading-articles');
     if (loading) loading.hidden = false;
 
@@ -46,10 +49,10 @@
       try {
         const parsed = await FeedParser.fetchAndParse(feed.url, proxy);
         await Storage.upsertArticles(feed.id, parsed.items);
-        if (parsed.title && !feed.title) {
-          feed.title = parsed.title;
-          await Storage.updateFeed(feed);
-        }
+        const updates = { ...feed };
+        if (parsed.title && !feed.title) updates.title = parsed.title;
+        updates.lastUpdate = Date.now();
+        await Storage.updateFeed(updates);
       } catch (e) {
         console.warn('Feed refresh failed:', feed.url, e);
       }
@@ -71,17 +74,14 @@
   async function renderAll() {
     await loadFeeds();
     const limit = Storage.getSettings().postsPerPage || 15;
-    const [articles, starred, unreadCounts] = await Promise.all([
+    const [articles, unreadCounts] = await Promise.all([
       Storage.getArticles({ limit }),
-      Storage.getArticles({ starredOnly: true, limit }),
       getUnreadCounts(),
     ]);
 
     allArticles = articles;
-    starredArticles = starred;
 
     UI.renderArticleList('article-list', allArticles, feedMap, { emptyId: 'empty-state' });
-    UI.renderArticleList('starred-list', starredArticles, feedMap, { emptyId: 'empty-starred' });
     UI.renderFeedList(feeds, unreadCounts);
 
     const feedsToolbar = document.querySelector('.feeds-toolbar');
@@ -93,15 +93,8 @@
     const loadMoreAllWrap = document.getElementById('load-more-all-wrap');
     if (loadMoreAllWrap) loadMoreAllWrap.hidden = allArticles.length < limit;
 
-    const loadMoreStarredWrap = document.getElementById('load-more-starred-wrap');
-    if (loadMoreStarredWrap) loadMoreStarredWrap.hidden = starredArticles.length < limit;
-
-    // Re-attach list item listeners
     document.getElementById('article-list')?.querySelectorAll('.article-item').forEach((el) => {
       attachArticleItemListeners(el, allArticles, 'all');
-    });
-    document.getElementById('starred-list')?.querySelectorAll('.article-item').forEach((el) => {
-      attachArticleItemListeners(el, starredArticles, 'starred');
     });
     document.getElementById('feed-list')?.querySelectorAll('.feed-item').forEach((el) => {
       attachFeedItemListeners(el);
@@ -117,7 +110,7 @@
     el.addEventListener('click', (e) => {
       if (el.classList.contains('swipe-left') || el.classList.contains('swipe-right')) return;
       if (e.target.closest('.article-item-swipe-hint')) return;
-      UI.saveScroll(source === 'all' ? 'all' : 'starred');
+      UI.saveScroll('all');
       Storage.markArticleRead(id, true);
       UI.showArticle(article, feed, list, index);
       el.classList.remove('unread');
@@ -127,11 +120,7 @@
       Storage.markArticleRead(id, true);
       el.classList.remove('unread');
       renderAll();
-    }, () => {
-      Storage.markArticleStarred(id, true);
-      el.classList.add('starred');
-      renderAll();
-    });
+    }, () => {});
   }
 
   function attachFeedItemListeners(el) {
@@ -145,9 +134,6 @@
       document.getElementById('view-title').textContent = feed?.title || 'Feed';
       UI.renderArticleList('article-list', articles, feedMap, { emptyId: 'empty-state' });
       document.getElementById('article-list')?.querySelectorAll('.article-item').forEach((item) => {
-        const aid = item.dataset.articleId;
-        const art = articles.find((a) => a.id === aid);
-        const f = feedMap[art?.feedId];
         attachArticleItemListeners(item, articles, 'all');
       });
     });
@@ -158,6 +144,11 @@
         await renderAll();
       }
     });
+    UI.initSwipe(el, () => {
+      if (confirm('Remove this feed?')) {
+        Storage.deleteFeed(feedId).then(() => renderAll());
+      }
+    }, () => {});
   }
 
   const PROXIES = [
@@ -259,7 +250,7 @@
 
   /** Add a feed when we already have the feed URL. Adds immediately, fetches in background. */
   async function addFeedByUrl(feedUrl) {
-    const feed = { url: feedUrl, title: 'Loading…', order: feeds.length };
+    const feed = { url: feedUrl, title: 'Loading…', order: feeds.length, lastUpdate: Date.now() };
     const saved = await Storage.addFeed(feed);
     await loadFeeds();
     await renderAll();
@@ -273,7 +264,7 @@
     if (!url) return false;
     if (!url.startsWith('http')) url = 'https://' + url;
 
-    const feed = { url, title: 'Loading…', order: feeds.length };
+    const feed = { url, title: 'Loading…', order: feeds.length, lastUpdate: Date.now() };
     const saved = await Storage.addFeed(feed);
     await loadFeeds();
     await renderAll();
@@ -322,7 +313,7 @@
   function wireNavigation() {
     window.addEventListener('hashchange', () => {
       const hash = (window.location.hash || '#all').slice(1);
-      const viewId = ['all', 'feeds', 'starred', 'settings', 'about'].includes(hash) ? hash : 'all';
+      const viewId = ['all', 'feeds', 'settings', 'about'].includes(hash) ? hash : 'all';
       UI.showView(viewId);
       if (viewId === 'feeds') {
         document.getElementById('add-feed-form').hidden = true;
@@ -585,6 +576,7 @@
     document.getElementById('setting-posts-per-page').value = String(s.postsPerPage ?? 15);
     document.getElementById('setting-font-size').value = String(s.fontSize);
     document.getElementById('setting-proxy').value = s.proxy;
+    document.getElementById('setting-feed-order').value = s.feedOrder || 'alphabetical';
 
     document.getElementById('setting-theme')?.addEventListener('change', (e) => {
       s.theme = e.target.value;
@@ -609,6 +601,11 @@
     document.getElementById('setting-proxy')?.addEventListener('change', (e) => {
       s.proxy = e.target.value;
       Storage.saveSettings(s);
+    });
+    document.getElementById('setting-feed-order')?.addEventListener('change', (e) => {
+      s.feedOrder = e.target.value;
+      Storage.saveSettings(s);
+      renderAll();
     });
 
     document.getElementById('btn-export-opml')?.addEventListener('click', () => {
@@ -645,25 +642,28 @@
       }
       const settings = Storage.getSettings();
       let added = 0;
-      let failed = 0;
+      const failedUrls = [];
       for (const f of imported) {
         try {
           let feedUrl = f.url;
           const normalized = await FeedParser.normalizeInputToFeedUrl(f.url, settings.proxy);
           if (normalized) feedUrl = normalized;
           const parsed = await FeedParser.fetchAndParse(feedUrl, settings.proxy);
-          const feed = { url: feedUrl, title: parsed.title || f.title, order: feeds.length };
+          const title = (f.title && f.title.trim()) ? f.title.trim() : (parsed.title || '');
+          const feed = { url: feedUrl, title, order: feeds.length, lastUpdate: Date.now() };
           const saved = await Storage.addFeed(feed);
           await Storage.upsertArticles(saved.id, parsed.items);
           feeds = await loadFeeds();
           added++;
         } catch (err) {
           console.warn('Import feed failed:', f.url, err);
-          failed++;
+          failedUrls.push(f.title || f.url);
         }
       }
       if (added > 0) statusEl.textContent = `Imported ${added} feed${added !== 1 ? 's' : ''}.`;
-      if (failed > 0) statusEl.textContent += ` ${failed} failed (check console).`;
+      if (failedUrls.length > 0) {
+        statusEl.textContent += ` ${failedUrls.length} failed. Try another CORS proxy in Settings or retry on Wi‑Fi.`;
+      }
       e.target.value = '';
       await renderAll();
     });
@@ -720,16 +720,6 @@
       });
     });
 
-    document.getElementById('btn-load-more-starred')?.addEventListener('click', async () => {
-      const next = await Storage.getArticles({ starredOnly: true, limit: limit(), offset: starredArticles.length });
-      starredArticles = starredArticles.concat(next);
-      UI.renderArticleList('starred-list', starredArticles, feedMap, { emptyId: 'empty-starred' });
-      document.getElementById('empty-starred').hidden = starredArticles.length > 0;
-      document.getElementById('load-more-starred-wrap').hidden = next.length < limit();
-      document.getElementById('starred-list')?.querySelectorAll('.article-item').forEach((el) => {
-        attachArticleItemListeners(el, starredArticles, 'starred');
-      });
-    });
   }
 
   async function init() {
@@ -752,7 +742,7 @@
     wirePullToRefresh();
 
     const hash = (window.location.hash || '#all').slice(1);
-    UI.showView(['all', 'feeds', 'starred', 'settings', 'about'].includes(hash) ? hash : 'all');
+    UI.showView(['all', 'feeds', 'settings', 'about'].includes(hash) ? hash : 'all');
 
     if (feeds.length > 0) await refreshAllFeeds();
     scheduleRefresh();

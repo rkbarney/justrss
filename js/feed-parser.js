@@ -453,8 +453,11 @@ async function discoverFeedUrl(websiteUrl, proxyBase) {
   return null;
 }
 
+const YOUTUBE_GENERIC_TITLES = ['Videos', 'Shorts', 'Live', 'All'];
+
 /**
  * Fetch, parse, and return normalized feed + items.
+ * For YouTube feeds with generic channel title (e.g. "Videos"), use first item's author as channel name.
  */
 async function fetchAndParse(feedUrl, proxyBase) {
   const result = await fetchFeed(feedUrl, proxyBase);
@@ -463,6 +466,12 @@ async function fetchAndParse(feedUrl, proxyBase) {
     feed = parseRSS2JSON(result.data);
   } else {
     feed = parseXML(result.raw);
+  }
+  if (feedUrl && feedUrl.includes('youtube.com/feeds/videos.xml') &&
+      YOUTUBE_GENERIC_TITLES.includes(feed.title?.trim()) &&
+      feed.items?.length > 0) {
+    const author = (feed.items[0].author || '').trim();
+    if (author) feed.title = `${author} - ${feed.title.trim()}`;
   }
   return feed;
 }

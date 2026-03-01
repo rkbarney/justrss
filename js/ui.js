@@ -31,7 +31,7 @@ const UI = {
     if (view) view.classList.add('view-active');
 
     const title = document.getElementById('view-title');
-    const titles = { all: 'JustRSS', feeds: 'Feeds', starred: 'Starred', settings: 'Settings', about: 'About', article: '' };
+    const titles = { all: 'JustRSS', feeds: 'Feeds', settings: 'Settings', about: 'About', article: '' };
     title.textContent = titles[viewId] || 'Article';
 
     const backBtn = document.getElementById('btn-back');
@@ -100,7 +100,6 @@ const UI = {
       el.dataset.articleId = a.id;
       el.innerHTML = `
         <span class="article-item-swipe-hint left" aria-hidden="true">Read</span>
-        <span class="article-item-swipe-hint right" aria-hidden="true">★</span>
         <span class="article-item-star" aria-hidden="true">★</span>
         <h2 class="article-item-title">${UI.escapeHtml(a.title)}</h2>
         <div class="article-item-meta">${metaParts.join(' · ')}</div>
@@ -122,6 +121,7 @@ const UI = {
       el.className = 'feed-item';
       el.dataset.feedId = f.id;
       el.innerHTML = `
+        <span class="feed-item-swipe-hint left" aria-hidden="true">Remove</span>
         <div class="feed-item-info">
           <div class="feed-item-title">${UI.escapeHtml(f.title || f.url)}</div>
           <div class="feed-item-meta">${unread} unread</div>
@@ -155,7 +155,7 @@ const UI = {
     UI.currentArticleIndex = index ?? 0;
     UI.renderArticleContent(article, feed);
     document.getElementById('view-article').classList.add('view-active');
-    document.querySelectorAll('#view-all, #view-feeds, #view-starred, #view-settings').forEach((v) => v.classList.remove('view-active'));
+    document.querySelectorAll('#view-all, #view-feeds, #view-settings').forEach((v) => v.classList.remove('view-active'));
     document.getElementById('view-title').textContent = '';
     document.getElementById('btn-back').hidden = false;
     document.querySelectorAll('.nav-item').forEach((n) => n.classList.remove('nav-active'));
