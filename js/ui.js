@@ -165,15 +165,13 @@ const UI = {
     feeds.forEach((f) => {
       const unread = unreadCounts[f.id] || 0;
       const muted = !!f.muted;
-      const hasNew = unread > 0;
       const el = document.createElement('div');
-      el.className = 'feed-item' + (muted ? ' muted' : '') + (hasNew ? ' has-new' : '');
+      el.className = 'feed-item' + (muted ? ' muted' : '');
       el.dataset.feedId = f.id;
       el.innerHTML = `
         <div class="feed-item-info">
           <div class="feed-item-title">
             ${UI.escapeHtml(f.title || f.url)}
-            ${hasNew ? '<span class="feed-item-new-dot" aria-hidden="true"></span>' : ''}
           </div>
           <div class="feed-item-meta">${unread} unread</div>
         </div>
@@ -182,25 +180,53 @@ const UI = {
     });
   },
 
+  stripHtml(html) {
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    return (div.textContent || div.innerText || '').replace(/\s+/g, ' ').trim();
+  },
+
   renderArticleContent(article, feed) {
-    document.getElementById('article-title').textContent = article?.title || '';
+    const titleEl = document.getElementById('article-title');
+    const displayUrl = UI.getArticleDisplayUrl(article, feed);
+    titleEl.textContent = article?.title || '';
+    titleEl.href = displayUrl || '#';
+    titleEl.style.pointerEvents = displayUrl ? '' : 'none';
     document.getElementById('article-meta').innerHTML = feed
       ? `${UI.escapeHtml(feed.title)} · ${UI.formatDate(article?.published)}`
       : '';
     const body = document.getElementById('article-body');
     const content = (article?.content || '').trim();
+    const plainText = content ? UI.stripHtml(content) : '';
+    const TRUNCATE_LEN = 250;
     let html = '';
     if (article?.image && /^https?:\/\//i.test(article.image)) {
       html += `<p><img src="${article.image.replace(/"/g, '&quot;')}" alt="" style="max-width:100%;height:auto;"></p>`;
     }
     if (content) {
-      html += content;
+      const fullHtml = html + content;
+      if (plainText.length > TRUNCATE_LEN) {
+        const truncated = UI.escapeHtml(plainText.slice(0, TRUNCATE_LEN));
+        html += `<p class="article-body-truncated">${truncated}<span class="article-body-expand" role="button" tabindex="0">...</span></p>`;
+        body.innerHTML = html;
+        const expandEl = body.querySelector('.article-body-expand');
+        expandEl.addEventListener('click', () => {
+          body.innerHTML = fullHtml;
+        });
+        expandEl.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            body.innerHTML = fullHtml;
+          }
+        });
+      } else {
+        body.innerHTML = fullHtml;
+      }
     } else {
       html += '<p class="no-preview">No preview available. Use "Open in browser" above to read the full article.</p>';
+      body.innerHTML = html;
     }
-    body.innerHTML = html;
     const link = document.getElementById('article-link');
-    const displayUrl = UI.getArticleDisplayUrl(article, feed);
     link.href = displayUrl || '#';
     link.setAttribute('href', displayUrl || '#');
   },

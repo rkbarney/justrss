@@ -268,14 +268,10 @@ async function restoreHiddenArticles() {
 // --- Settings (localStorage) ---
 
 const SETTINGS_KEY = 'justrss-settings';
-const _defaultProxyUrl = (typeof window !== 'undefined' && window.JUSTRSS_CONFIG?.defaultProxyUrl) || '';
 const DEFAULTS = {
   colorScheme: 'system',
   style: 'minimal',
   refreshInterval: 30,
-  fontSize: 18,
-  fontFamily: 'courier',
-  proxyUrls: _defaultProxyUrl || '',
   postsPerPage: 15,
   feedOrder: 'alphabetical',
   navPosition: 'top',
@@ -285,17 +281,9 @@ function getSettings() {
   try {
     const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
     let merged = { ...DEFAULTS, ...s };
-    // Migrate old proxy/proxySelfHosted to proxyUrls
-    if (s.proxy !== undefined || s.proxySelfHosted !== undefined) {
-      const configDefault = typeof window !== 'undefined' && window.JUSTRSS_CONFIG?.defaultProxyUrl;
-      const oldUrl = s.proxy === '__self_hosted__'
-        ? (s.proxySelfHosted || configDefault || '')
-        : (typeof s.proxy === 'string' ? s.proxy : '');
-      if (oldUrl && oldUrl.trim()) merged.proxyUrls = oldUrl.trim();
-      delete merged.proxy;
-      delete merged.proxySelfHosted;
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify(merged));
-    }
+    delete merged.proxy;
+    delete merged.proxySelfHosted;
+    delete merged.proxyUrls;
     // Migrate old theme to colorScheme + style
     if (s.theme && !s.colorScheme && !s.style) {
       const t = s.theme;

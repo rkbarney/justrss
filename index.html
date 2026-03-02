@@ -115,27 +115,7 @@
               <option value="100">100</option>
             </select>
           </div>
-          <div class="setting-row">
-            <span>Article font size</span>
-            <select id="setting-font-size" aria-label="Font size">
-              <option value="16">Small</option>
-              <option value="18" selected>Medium</option>
-              <option value="20">Large</option>
-            </select>
-          </div>
-          <div class="setting-row">
-            <span>Font</span>
-            <select id="setting-font-family" aria-label="Font">
-              <option value="courier">Courier</option>
-              <option value="times">Times</option>
-              <option value="arial">Arial</option>
-            </select>
-          </div>
-          <div class="setting-row setting-proxy-urls">
-            <label for="setting-proxy-urls">CORS proxy URL(s)</label>
-            <textarea id="setting-proxy-urls" rows="3" placeholder="https://justrss-proxy.yourname.workers.dev/?url=" aria-label="Proxy URLs, one per line"></textarea>
-            <p class="hint">One URL per line. Add more as fallbacks if needed. <a href="https://github.com/rkbarney/justrss/blob/main/README.md" target="_blank" rel="noopener noreferrer">See README for setup</a>.</p>
-          </div>
+          <p class="hint">Font size can be adjusted in your browser or device settings.</p>
           <div class="setting-row">
             <span>Feed order</span>
             <select id="setting-feed-order" aria-label="Feed order">
@@ -196,17 +176,17 @@
       <!-- Article reader -->
       <section id="view-article" class="view view-article">
         <article id="article-content" class="article-content">
-          <h1 id="article-title"></h1>
+          <h1 id="article-title-wrap"><a id="article-title" href="#" target="_blank" rel="noopener"></a></h1>
           <div id="article-meta" class="article-meta"></div>
           <div class="article-actions">
             <a id="article-link" href="#" target="_blank" rel="noopener" class="btn-secondary">Open in browser</a>
             <button type="button" id="btn-share" class="btn-secondary">Share</button>
-            <nav class="article-nav">
-              <button type="button" id="btn-prev-article" class="btn-secondary">Previous</button>
-              <button type="button" id="btn-next-article" class="btn-secondary">Next</button>
-            </nav>
           </div>
           <div id="article-body" class="article-body"></div>
+          <nav class="article-nav">
+            <button type="button" id="btn-prev-article" class="btn-secondary">Previous</button>
+            <button type="button" id="btn-next-article" class="btn-secondary">Next</button>
+          </nav>
         </article>
       </section>
 

@@ -511,6 +511,10 @@ async function normalizeInputToFeedUrl(inputUrl, proxyBase) {
   const isSubstack = host.endsWith('.substack.com') || host === 'substack.com' || host === 'www.substack.com';
 
   if (isSubstack) {
+    if (host === 'substack.com' || host === 'www.substack.com') {
+      const match = url.pathname.match(/^\/@([^/]+)/);
+      if (match) return `https://${match[1]}.substack.com/feed`;
+    }
     const base = url.origin.replace(/\/$/, '');
     const path = url.pathname.replace(/\/p\/[^/]*$/, '').replace(/\/$/, '') || '';
     return base + path + '/feed';

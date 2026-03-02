@@ -16,8 +16,6 @@
   function applyTheme() {
     const s = Storage.getSettings();
     UI.setTheme(s.colorScheme, s.style);
-    UI.setFontSize(s.fontSize);
-    UI.setFontFamily(s.fontFamily);
     UI.setNavPosition(s.navPosition);
   }
 
@@ -333,22 +331,9 @@
     return u + '/?url=';
   }
 
-  function parseProxyUrls(text) {
-    if (!text || !text.trim()) return [];
-    const raw = text.split(/[\n,]+/).map((s) => s.trim()).filter(Boolean);
-    const seen = new Set();
-    return raw.map(normalizeProxyUrl).filter((u) => u && !seen.has(u) && seen.add(u));
-  }
-
   function getProxyList() {
-    const settings = Storage.getSettings();
-    const text = settings?.proxyUrls || '';
-    let list = parseProxyUrls(text);
-    if (list.length === 0) {
-      const fallback = normalizeProxyUrl(window.JUSTRSS_CONFIG?.defaultProxyUrl || '');
-      if (fallback) list = [fallback];
-    }
-    return list;
+    const url = normalizeProxyUrl(window.JUSTRSS_CONFIG?.defaultProxyUrl || '');
+    return url ? [url] : [];
   }
 
   function getEffectiveProxy() {
@@ -393,8 +378,8 @@
     if (msg.includes('HTTP 404') || msg.includes('404')) return 'Feed not found (404).';
     if (msg.includes('HTTP 5') || msg.includes('50')) return 'Server error. Try again later.';
     if (msg.includes('Invalid XML') || msg.includes('parsererror')) return 'Feed returned invalid XML.';
-    if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('timeout')) return 'Network error or proxy timeout. Check proxy URL in Settings.';
-    return 'Could not load feed. Check proxy URL in Settings.';
+    if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('timeout')) return 'Network error or timeout. Try again later.';
+    return 'Could not load feed. Try again later.';
   }
 
   /** Resolve YouTube feed title when it's generic (Videos, Shorts, Live, All). */
@@ -550,7 +535,10 @@
 
   function wireNavigation() {
     document.getElementById('view-title-wrap')?.addEventListener('click', (e) => {
-      if (currentFeedId) {
+      if (beforeArticleView && document.getElementById('view-article')?.classList.contains('view-active')) {
+        e.preventDefault();
+        history.back();
+      } else if (currentFeedId) {
         e.preventDefault();
         currentFeedId = null;
         setViewTitle();
@@ -736,10 +724,23 @@
       if (isSubstackUrl(url)) {
         try {
           const u = new URL(url);
-          const base = u.origin.replace(/\/$/, '');
-          const path = u.pathname.replace(/\/p\/[^/]*$/, '').replace(/\/$/, '') || '';
-          const feedUrl = base + path + '/feed';
-          const subName = u.hostname.replace(/^www\./, '').replace(/\.substack\.com$/, '') || u.pathname.split('/')[1] || u.hostname;
+          const h = u.hostname.toLowerCase();
+          let feedUrl;
+          if (h === 'substack.com' || h === 'www.substack.com') {
+            const match = u.pathname.match(/^\/@([^/]+)/);
+            if (match) {
+              feedUrl = `https://${match[1]}.substack.com/feed`;
+            } else {
+              const base = u.origin.replace(/\/$/, '');
+              const path = u.pathname.replace(/\/p\/[^/]*$/, '').replace(/\/$/, '') || '';
+              feedUrl = base + path + '/feed';
+            }
+          } else {
+            const base = u.origin.replace(/\/$/, '');
+            const path = u.pathname.replace(/\/p\/[^/]*$/, '').replace(/\/$/, '') || '';
+            feedUrl = base + path + '/feed';
+          }
+          const subName = u.hostname.replace(/^www\./, '').replace(/\.substack\.com$/, '') || u.pathname.match(/^\/@([^/]+)/)?.[1] || u.hostname;
           const ok = await addFeedByUrl(feedUrl, subName);
           if (ok) closeAddFeedDialog();
         } catch {
@@ -901,9 +902,6 @@
     document.getElementById('setting-nav-position').value = s.navPosition || 'top';
     document.getElementById('setting-refresh').value = String(s.refreshInterval);
     document.getElementById('setting-posts-per-page').value = String(s.postsPerPage ?? 15);
-    document.getElementById('setting-font-size').value = String(s.fontSize);
-    document.getElementById('setting-font-family').value = s.fontFamily || 'times';
-    document.getElementById('setting-proxy-urls').value = s.proxyUrls || '';
     document.getElementById('setting-feed-order').value = s.feedOrder || 'alphabetical';
 
     document.getElementById('setting-color-scheme')?.addEventListener('change', (e) => {
@@ -930,20 +928,6 @@
       s.postsPerPage = Number(e.target.value);
       Storage.saveSettings(s);
       renderAll();
-    });
-    document.getElementById('setting-font-size')?.addEventListener('change', (e) => {
-      s.fontSize = Number(e.target.value);
-      Storage.saveSettings(s);
-      UI.setFontSize(s.fontSize);
-    });
-    document.getElementById('setting-font-family')?.addEventListener('change', (e) => {
-      s.fontFamily = e.target.value;
-      Storage.saveSettings(s);
-      UI.setFontFamily(s.fontFamily);
-    });
-    document.getElementById('setting-proxy-urls')?.addEventListener('input', (e) => {
-      s.proxyUrls = e.target.value.trim();
-      Storage.saveSettings(s);
     });
     document.getElementById('setting-feed-order')?.addEventListener('change', (e) => {
       s.feedOrder = e.target.value;
@@ -1061,7 +1045,7 @@
       }
       if (added > 0) statusEl.textContent = `Imported ${added} feed${added !== 1 ? 's' : ''}.`;
       if (failedUrls.length > 0) {
-        statusEl.textContent += (added > 0 ? ' ' : '') + `${failedUrls.length} failed. Check proxy URL in Settings.`;
+        statusEl.textContent += (added > 0 ? ' ' : '') + `${failedUrls.length} failed.`;
         if (failedListEl) {
           failedListEl.innerHTML = failedUrls.map((name, i) => {
             const detail = failedDetails[i] ? ` — ${UI.escapeHtml(failedDetails[i])}` : '';
@@ -1073,7 +1057,7 @@
         failedListEl.hidden = true;
       }
       if (added === 0 && failedUrls.length > 0) {
-        statusEl.textContent = `All ${failedUrls.length} feeds failed. Check proxy URL in Settings.`;
+        statusEl.textContent = `All ${failedUrls.length} feeds failed.`;
       }
       e.target.value = '';
       await renderAll();
