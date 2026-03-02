@@ -176,10 +176,10 @@ const UI = {
     UI.currentArticleIndex = index ?? 0;
     UI.renderArticleContent(article, feed);
     document.getElementById('view-article').classList.add('view-active');
-    document.querySelectorAll('#view-all, #view-feeds, #view-settings').forEach((v) => v.classList.remove('view-active'));
-    document.getElementById('view-title').textContent = '';
+    document.querySelectorAll('#view-all, #view-feeds, #view-settings, #view-about').forEach((v) => v.classList.remove('view-active'));
+    document.getElementById('view-title').textContent = 'JustRSS';
     document.getElementById('btn-back').hidden = false;
-    document.querySelectorAll('.nav-item').forEach((n) => n.classList.remove('nav-active'));
+    document.querySelectorAll('.header-nav-link[data-view]').forEach((n) => n.classList.remove('nav-active'));
   },
 
   initSwipe(el, onSwipeLeft, onSwipeRight) {
