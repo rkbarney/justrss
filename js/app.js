@@ -663,9 +663,9 @@
           failedUrls.push(f.title || f.url);
         }
       }
-      if (added > 0) statusEl.textContent = `Imported ${added} feed${added !== 1 ? 's' : ''}.`;
+      statusEl.textContent = added > 0 ? `Imported ${added} feed${added !== 1 ? 's' : ''}.` : '';
       if (failedUrls.length > 0) {
-        statusEl.textContent += ` ${failedUrls.length} failed. Try another CORS proxy in Settings or retry on Wi‑Fi.`;
+        statusEl.textContent += `${statusEl.textContent ? ' ' : ''}${failedUrls.length} failed. Try another CORS proxy in Settings or retry on Wi‑Fi.`;
       }
       e.target.value = '';
       await renderAll();
