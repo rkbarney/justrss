@@ -1,3 +1,12 @@
 name = "justrss-proxy"
 main = "index.js"
 compatibility_date = "2025-03-01"
+
+# Rate limit: 120 requests per minute per IP (backstop if Referer is spoofed)
+[[ratelimits]]
+name = "PROXY_RATE_LIMITER"
+namespace_id = "1001"
+
+  [ratelimits.simple]
+  limit = 120
+  period = 60

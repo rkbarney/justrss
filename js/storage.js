@@ -195,6 +195,28 @@ async function markArticleRead(articleId, read = true) {
   });
 }
 
+async function markAllArticlesRead(feedId = null) {
+  const database = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = database.transaction(STORE_ARTICLES, 'readwrite');
+    const store = tx.objectStore(STORE_ARTICLES);
+    const req = feedId
+      ? store.index('feedId').openCursor(IDBKeyRange.only(feedId))
+      : store.openCursor();
+    req.onsuccess = () => {
+      const cursor = req.result;
+      if (cursor) {
+        cursor.value.read = true;
+        cursor.update(cursor.value);
+        cursor.continue();
+      } else {
+        resolve();
+      }
+    };
+    req.onerror = () => reject(req.error);
+  });
+}
+
 async function markArticleStarred(articleId, starred = true) {
   const a = await getArticle(articleId);
   if (!a) return;
@@ -248,20 +270,49 @@ async function restoreHiddenArticles() {
 const SETTINGS_KEY = 'justrss-settings';
 const _defaultProxyUrl = (typeof window !== 'undefined' && window.JUSTRSS_CONFIG?.defaultProxyUrl) || '';
 const DEFAULTS = {
-  theme: 'auto',
+  colorScheme: 'system',
+  style: 'minimal',
   refreshInterval: 30,
   fontSize: 18,
-  fontFamily: 'times',
-  proxy: _defaultProxyUrl ? '__self_hosted__' : 'https://api.allorigins.win/raw?url=',
-  proxySelfHosted: _defaultProxyUrl,
+  fontFamily: 'courier',
+  proxyUrls: _defaultProxyUrl || '',
   postsPerPage: 15,
   feedOrder: 'alphabetical',
+  hideReadArticles: false,
+  navPosition: 'top',
 };
 
 function getSettings() {
   try {
     const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
-    return { ...DEFAULTS, ...s };
+    let merged = { ...DEFAULTS, ...s };
+    // Migrate old proxy/proxySelfHosted to proxyUrls
+    if (s.proxy !== undefined || s.proxySelfHosted !== undefined) {
+      const configDefault = typeof window !== 'undefined' && window.JUSTRSS_CONFIG?.defaultProxyUrl;
+      const oldUrl = s.proxy === '__self_hosted__'
+        ? (s.proxySelfHosted || configDefault || '')
+        : (typeof s.proxy === 'string' ? s.proxy : '');
+      if (oldUrl && oldUrl.trim()) merged.proxyUrls = oldUrl.trim();
+      delete merged.proxy;
+      delete merged.proxySelfHosted;
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(merged));
+    }
+    // Migrate old theme to colorScheme + style
+    if (s.theme && !s.colorScheme && !s.style) {
+      const t = s.theme;
+      if (t === 'light' || t === 'dark') {
+        merged.colorScheme = t;
+        merged.style = 'craigslist';
+      } else if (t === 'auto') {
+        merged.colorScheme = 'system';
+        merged.style = 'minimal';
+      } else if (t === 'minimal' || t === 'craigslist') {
+        merged.colorScheme = 'system';
+        merged.style = t;
+      }
+      delete merged.theme;
+    }
+    return merged;
   } catch {
     return { ...DEFAULTS };
   }
@@ -335,6 +386,7 @@ window.Storage = {
   getArticle,
   upsertArticles,
   markArticleRead,
+  markAllArticlesRead,
   markArticleStarred,
   markArticleHidden,
   restoreHiddenArticles,

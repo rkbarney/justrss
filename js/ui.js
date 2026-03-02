@@ -7,17 +7,26 @@ const UI = {
   currentArticleList: [],
   currentArticleIndex: 0,
 
-  setTheme(theme) {
+  _colorScheme: 'system',
+
+  setTheme(colorScheme, style) {
     const root = document.documentElement;
-    if (theme === 'auto') {
-      root.removeAttribute('data-theme');
+    UI._colorScheme = colorScheme || 'system';
+    root.setAttribute('data-style', style || 'minimal');
+    const applyColor = (dark) => {
+      if (UI._colorScheme === 'system') {
+        root.setAttribute('data-color-scheme', dark ? 'dark' : 'light');
+      }
+    };
+    if (colorScheme === 'system') {
       const mq = window.matchMedia('(prefers-color-scheme: dark)');
-      root.setAttribute('data-theme', mq.matches ? 'dark' : 'light');
-      mq.addEventListener('change', (e) => {
-        root.setAttribute('data-theme', e.matches ? 'dark' : 'light');
-      });
+      applyColor(mq.matches);
+      if (!UI._mqListener) {
+        UI._mqListener = (e) => applyColor(e.matches);
+        mq.addEventListener('change', UI._mqListener);
+      }
     } else {
-      root.setAttribute('data-theme', theme);
+      root.setAttribute('data-color-scheme', colorScheme === 'dark' ? 'dark' : 'light');
     }
   },
 
@@ -26,7 +35,11 @@ const UI = {
   },
 
   setFontFamily(fontFamily) {
-    document.body.setAttribute('data-font-family', fontFamily || 'times');
+    document.body.setAttribute('data-font-family', fontFamily || 'courier');
+  },
+
+  setNavPosition(position) {
+    document.body.setAttribute('data-nav-position', position || 'top');
   },
 
   showView(viewId) {
@@ -37,15 +50,14 @@ const UI = {
     const loading = document.getElementById('loading-articles');
     if (loading) loading.hidden = true;
 
-    const title = document.getElementById('view-title');
-    if (title && viewId !== 'article') title.textContent = 'JustRSS';
+    if (viewId !== 'article' && typeof UI.setViewTitle === 'function') UI.setViewTitle();
 
     const backBtn = document.getElementById('btn-back');
     backBtn.hidden = viewId !== 'article';
     const headerMain = document.querySelector('.app-header-main');
     if (headerMain) headerMain.hidden = viewId === 'article';
 
-    document.querySelectorAll('.header-nav-link[data-view], #view-title').forEach((n) => {
+    document.querySelectorAll('.header-nav-link[data-view]').forEach((n) => {
       const nView = n.getAttribute('data-view');
       if (nView) {
         n.classList.toggle('nav-active', nView === viewId);
@@ -62,7 +74,7 @@ const UI = {
 
   saveScroll(viewId) {
     const view = document.getElementById(`view-${viewId}`);
-    const scrollEl = viewId === 'feeds' ? view : view?.querySelector('.article-list, .feed-list, .about-content');
+    const scrollEl = viewId === 'feeds' ? view : view?.querySelector('.article-list, .feed-list, .settings-list, .about-content');
     if (scrollEl) UI.scrollPositions[viewId] = scrollEl.scrollTop;
   },
 
@@ -87,6 +99,23 @@ const UI = {
     return div.innerHTML;
   },
 
+  /** URL for "Open in browser". For podcasts, prefer Apple Podcasts URL (reliable) or feed link; episode links often 404. */
+  getArticleDisplayUrl(article, feed) {
+    const articleLink = (article?.link || '').trim();
+    const feedLink = (feed?.link || '').trim();
+    const appleUrl = (feed?.appleUrl || '').trim();
+    const feedUrl = (feed?.url || '').trim();
+    const isPodcast = article?.durationSeconds != null && article.durationSeconds > 0;
+    const mediaExt = /\.(mp3|m4a|mp4|wav|ogg|aac|mpa|webm|opus)(\?|$)/i;
+    const articleLinkIsMedia = articleLink && mediaExt.test(articleLink);
+    if (appleUrl) return appleUrl;
+    if (isPodcast && feedLink) return feedLink;
+    if (articleLink && !articleLinkIsMedia) return articleLink;
+    if (feedLink) return feedLink;
+    if (feedUrl) return feedUrl;
+    return articleLink || '';
+  },
+
   renderArticleList(containerId, articles, feedMap, options = {}) {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -95,7 +124,18 @@ const UI = {
     const list = options.listId || 'article-list';
     const emptyId = options.emptyId || 'empty-state';
     const emptyEl = document.getElementById(emptyId);
-    if (emptyEl) emptyEl.hidden = articles.length > 0;
+    if (emptyEl) {
+      emptyEl.hidden = articles.length > 0;
+      if (articles.length === 0) {
+        const newUser = document.getElementById('empty-state-new-user');
+        const allRead = document.getElementById('empty-state-all-read');
+        const showAllRead = (options.feedsLength || 0) > 0;
+        if (newUser) newUser.hidden = showAllRead;
+        if (allRead) allRead.hidden = !showAllRead;
+        const loadMoreWrap = document.getElementById('load-more-all-wrap');
+        if (loadMoreWrap) loadMoreWrap.hidden = true;
+      }
+    }
 
     articles.forEach((a) => {
       const feed = feedMap[a.feedId] || {};
@@ -132,17 +172,12 @@ const UI = {
       el.className = 'feed-item' + (muted ? ' muted' : '') + (hasNew ? ' has-new' : '');
       el.dataset.feedId = f.id;
       el.innerHTML = `
-        <span class="feed-item-swipe-hint left" aria-hidden="true">Remove</span>
-        <span class="feed-item-swipe-hint right" aria-hidden="true">${muted ? 'Unmute' : 'Mute'}</span>
         <div class="feed-item-info">
           <div class="feed-item-title">
             ${UI.escapeHtml(f.title || f.url)}
             ${hasNew ? '<span class="feed-item-new-dot" aria-hidden="true"></span>' : ''}
           </div>
           <div class="feed-item-meta">${unread} unread</div>
-        </div>
-        <div class="feed-item-actions">
-          <button type="button" class="btn-feed-delete" aria-label="Remove feed">✕</button>
         </div>
       `;
       container.appendChild(el);
@@ -163,12 +198,13 @@ const UI = {
     if (content) {
       html += content;
     } else {
-      html += '<p class="no-preview">No preview available. Tap "Open in browser" below to read the full article.</p>';
+      html += '<p class="no-preview">No preview available. Use "Open in browser" above to read the full article.</p>';
     }
     body.innerHTML = html;
     const link = document.getElementById('article-link');
-    link.href = article?.link || '#';
-    link.setAttribute('href', article?.link || '#');
+    const displayUrl = UI.getArticleDisplayUrl(article, feed);
+    link.href = displayUrl || '#';
+    link.setAttribute('href', displayUrl || '#');
   },
 
   showArticle(article, feed, list, index) {

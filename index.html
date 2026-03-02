@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-style="minimal" data-color-scheme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover">
@@ -16,19 +16,22 @@
     <!-- Header -->
     <header class="app-header">
       <div class="app-header-main">
-        <a href="#all" class="app-title" id="view-title" data-view="all">JustRSS</a>
+        <a href="#all" class="app-title-wrap" id="view-title-wrap">
+          <span class="app-title" id="view-title">JustRSS</span>
+          <span class="app-title-sub" id="view-title-sub" hidden></span>
+        </a>
         <nav class="app-header-nav" aria-label="Main">
           <a href="#feeds" class="header-nav-link" data-view="feeds">Feeds</a>
           <a href="#settings" class="header-nav-link" data-view="settings">Settings</a>
+          <a href="#help" class="header-nav-link" data-view="help">Help</a>
           <a href="#about" class="header-nav-link" data-view="about">About</a>
           <button type="button" id="btn-share-main" class="header-nav-link" aria-label="Share or add to home screen">Share</button>
         </nav>
       </div>
       <button type="button" id="btn-back" class="icon-btn" aria-label="Back" hidden></button>
+      <div id="loading-articles" class="header-loading" hidden aria-live="polite" aria-label="Loading"><span class="spinner"></span></div>
       <button type="button" id="btn-refresh" class="icon-btn" aria-label="Refresh feeds"></button>
     </header>
-
-    <div id="loading-articles" class="loading loading-fixed" hidden aria-live="polite">Loading…</div>
     <div id="toast" class="toast" hidden aria-live="polite"></div>
 
     <!-- Main content areas -->
@@ -38,13 +41,20 @@
         <div id="pull-indicator" class="pull-indicator"></div>
         <div id="article-list" class="article-list" role="list"></div>
         <div id="load-more-all-wrap" class="load-more-wrap" hidden>
+          <button type="button" id="btn-mark-all-read" class="btn-secondary">Mark all as read</button>
           <button type="button" id="btn-load-more-all" class="btn-secondary">Load more</button>
         </div>
         <div id="empty-state" class="empty-state" hidden>
-          <p class="empty-philosophy">Browsing should feel intentional, not addictive.</p>
-          <p class="empty-text">This reader is built around that idea: your feeds, your attention. No engagement tricks, no lock-in.</p>
-          <p class="empty-text">They feed you slop. This is your feed.</p>
-          <a href="#feeds" class="btn-primary">Add to your feed</a>
+          <div id="empty-state-new-user">
+            <p class="empty-philosophy"><strong>They feed you slop. This is your feed.</strong></p>
+            <a href="#feeds" id="empty-add-to-feed" class="btn-primary">Add to your feed</a>
+            <p class="empty-import-link-wrap"><a href="#" id="empty-import-opml" class="empty-import-link">Import subscriptions using OPML file</a></p>
+          </div>
+          <div id="empty-state-all-read" class="empty-state-all-read" hidden>
+            <p class="empty-philosophy">Everything read.</p>
+            <p class="empty-text">Unhide read posts in Settings.</p>
+            <a href="#settings" class="btn-primary">Settings</a>
+          </div>
         </div>
       </section>
 
@@ -54,24 +64,15 @@
           <div class="feeds-toolbar">
             <button type="button" id="btn-add-feed-top" class="btn-primary">+ Add feed</button>
           </div>
-          <div id="add-feed-form" class="add-feed-form" hidden>
-          <label for="feed-url">RSS feed or website URL</label>
-          <input type="url" id="feed-url" placeholder="e.g. blog.substack.com or youtube.com/@channel" autocomplete="url">
-          <p class="hint hint-sources">Substack and YouTube: paste the blog or channel URL (we’ll find the feed). Any RSS/Atom URL works too.</p>
-          <p id="feed-url-hint" class="hint"></p>
-          <div id="add-feed-pending-list" class="add-feed-pending-list" aria-live="polite"></div>
-          <div class="form-actions" id="add-feed-form-actions">
-            <button type="button" id="btn-cancel-feed">Cancel</button>
-            <button type="button" id="btn-save-feed" class="btn-primary">Add feed</button>
-          </div>
-        </div>
         </div>
         <div id="feed-list" class="feed-list" role="list"></div>
+        <div id="mark-all-read-feeds-wrap" class="load-more-wrap" hidden>
+          <button type="button" id="btn-mark-all-read-feeds" class="btn-secondary">Mark all as read</button>
+        </div>
         <div id="empty-feeds" class="empty-state" hidden>
-          <p class="empty-philosophy">Browsing should feel intentional, not addictive.</p>
-          <p class="empty-text">This reader is built around that idea: your feeds, your attention. No engagement tricks, no lock-in.</p>
-          <p class="empty-text">They feed you slop. This is your feed.</p>
+          <p class="empty-philosophy"><strong>They feed you slop. This is your feed.</strong></p>
           <button type="button" id="btn-add-feed" class="btn-primary">Add to your feed</button>
+          <p class="empty-import-link-wrap"><a href="#" id="empty-import-opml-feeds" class="empty-import-link">Import subscriptions using OPML file</a></p>
         </div>
       </section>
 
@@ -79,11 +80,29 @@
       <section id="view-settings" class="view">
         <div class="settings-list">
           <div class="setting-row">
-            <span>Appearance</span>
-            <select id="setting-theme" aria-label="Theme">
-              <option value="auto">System</option>
+            <span>Light / Dark</span>
+            <select id="setting-color-scheme" aria-label="Color scheme">
+              <option value="system">System</option>
               <option value="light">Light</option>
               <option value="dark">Dark</option>
+            </select>
+          </div>
+          <div class="setting-row">
+            <span>Style</span>
+            <select id="setting-style" aria-label="Style">
+              <option value="minimal">Minimal</option>
+              <option value="craigslist">Craigslist</option>
+            </select>
+          </div>
+          <div class="setting-row setting-toggle">
+            <span>Hide read articles</span>
+            <input type="checkbox" id="setting-hide-read" aria-label="Hide read articles">
+          </div>
+          <div class="setting-row">
+            <span>Title / menu position</span>
+            <select id="setting-nav-position" aria-label="Nav position">
+              <option value="top">Top</option>
+              <option value="bottom">Bottom</option>
             </select>
           </div>
           <div class="setting-row">
@@ -116,24 +135,15 @@
           <div class="setting-row">
             <span>Font</span>
             <select id="setting-font-family" aria-label="Font">
+              <option value="courier">Courier</option>
               <option value="times">Times</option>
               <option value="arial">Arial</option>
-              <option value="courier">Courier</option>
             </select>
           </div>
-          <div class="setting-row">
-            <span>Feed proxy (CORS)</span>
-            <select id="setting-proxy" aria-label="CORS proxy">
-              <option value="__self_hosted__">Self-hosted (recommended)</option>
-              <option value="https://api.allorigins.win/raw?url=">AllOrigins</option>
-              <option value="https://corsproxy.io/?url=">CorsProxy.io</option>
-              <option value="https://api.rss2json.com/v1/api.json?rss_url=">RSS2JSON</option>
-            </select>
-          </div>
-          <div id="setting-proxy-self-hosted-wrap" class="setting-proxy-self-hosted" hidden>
-            <label for="setting-proxy-self-hosted">Your worker URL</label>
-            <input type="url" id="setting-proxy-self-hosted" placeholder="https://justrss-proxy.yourname.workers.dev/?url=">
-            <p class="hint">Paste the URL from your deployed Cloudflare Worker. See README for setup.</p>
+          <div class="setting-row setting-proxy-urls">
+            <label for="setting-proxy-urls">CORS proxy URL(s)</label>
+            <textarea id="setting-proxy-urls" rows="3" placeholder="https://justrss-proxy.yourname.workers.dev/?url=" aria-label="Proxy URLs, one per line"></textarea>
+            <p class="hint">One URL per line. Add more as fallbacks if needed. <a href="https://github.com/rkbarney/justrss/blob/main/README.md" target="_blank" rel="noopener noreferrer">See README for setup</a>.</p>
           </div>
           <div class="setting-row">
             <span>Feed order</span>
@@ -145,10 +155,16 @@
           <div class="setting-actions">
             <button type="button" id="btn-export-opml" class="btn-secondary">Export subscriptions (OPML)</button>
             <button type="button" id="btn-import-opml" class="btn-secondary">Import subscriptions (OPML)</button>
-            <p class="hint">On iPhone, if files are grayed out, open the file in Files first or choose “Browse” and pick from a folder.</p>
-            <p id="import-status" class="hint" aria-live="polite"></p>
+            <div id="import-status-wrap" class="import-status-wrap">
+              <p id="import-status" class="hint" aria-live="polite"></p>
+              <ul id="import-failed-list" class="import-failed-list" hidden></ul>
+            </div>
             <!-- accept broadened for iOS: Downloads often gray out when type doesn't match -->
 <input type="file" id="input-opml" accept=".opml,.xml,.txt,application/xml,text/xml,text/plain,application/opml+xml,*/*" hidden>
+            <button type="button" id="btn-force-refresh" class="btn-secondary">Force refresh feeds</button>
+            <p class="hint" style="margin-top: 4px;">Bypasses cache to re-fetch all feeds. Use when feeds show stale data.</p>
+            <button type="button" id="btn-force-reload-app" class="btn-secondary">Force reload app</button>
+            <p class="hint" style="margin-top: 4px;">Click to make sure you're on the most recent version of the app.</p>
             <button type="button" id="btn-restore-hidden" class="btn-secondary">Restore hidden articles</button>
             <button type="button" id="btn-clear-data" class="btn-danger">Clear all data</button>
           </div>
@@ -191,19 +207,90 @@
         <article id="article-content" class="article-content">
           <h1 id="article-title"></h1>
           <div id="article-meta" class="article-meta"></div>
-          <div id="article-body" class="article-body"></div>
           <div class="article-actions">
             <a id="article-link" href="#" target="_blank" rel="noopener" class="btn-secondary">Open in browser</a>
             <button type="button" id="btn-share" class="btn-secondary">Share</button>
+            <nav class="article-nav">
+              <button type="button" id="btn-prev-article" class="btn-secondary">Previous</button>
+              <button type="button" id="btn-next-article" class="btn-secondary">Next</button>
+            </nav>
           </div>
-          <nav class="article-nav">
-            <button type="button" id="btn-prev-article" class="btn-secondary">Previous</button>
-            <button type="button" id="btn-next-article" class="btn-secondary">Next</button>
-          </nav>
+          <div id="article-body" class="article-body"></div>
         </article>
       </section>
+
+      <!-- Help -->
+      <section id="view-help" class="view">
+        <div class="about-content">
+          <h2>What is RSS?</h2>
+          <p>RSS is how the web was meant to work. When a website publishes something new, their RSS feed updates automatically. You subscribe once, and new content comes to you — no algorithm, no ads, no one deciding what you see.</p>
+          <h2>How do I find an RSS feed?</h2>
+          <ul>
+            <li><strong>News sites and blogs:</strong> Most have a feed at /feed or /rss — try pasting the website URL into JustRSS and we'll find it automatically.</li>
+            <li><strong>Substack:</strong> Paste the newsletter URL — we'll find the feed.</li>
+            <li><strong>YouTube:</strong> Go to the channel page, copy the URL, paste it in the YouTube tab.</li>
+            <li><strong>Podcasts:</strong> Use the Podcasts tab to search by name.</li>
+            <li><strong>Anything else:</strong> Try googling <em>[website name] RSS feed</em>. Or paste the URL and we'll try to detect it.</li>
+          </ul>
+          <a href="#feeds" class="btn-primary">Back to Feeds</a>
+        </div>
+      </section>
     </main>
-  </div>
+
+    <div id="feed-action-dialog" class="feed-action-dialog" hidden role="dialog" aria-modal="true" aria-label="Feed actions">
+      <div class="feed-action-dialog-backdrop"></div>
+      <div class="feed-action-dialog-content">
+        <p id="feed-action-dialog-title" class="feed-action-dialog-title"></p>
+        <div class="feed-action-dialog-actions">
+          <button type="button" id="feed-action-mark-read" class="btn-secondary">Mark all as read</button>
+          <button type="button" id="feed-action-mute" class="btn-secondary">Mute</button>
+          <button type="button" id="feed-action-remove" class="btn-danger">Remove</button>
+          <button type="button" id="feed-action-cancel" class="btn-secondary">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="add-feed-dialog" class="add-feed-dialog" hidden role="dialog" aria-modal="true" aria-label="Add feed">
+      <div class="add-feed-dialog-backdrop"></div>
+      <div class="add-feed-dialog-content">
+        <div class="add-feed-dialog-tabs" role="tablist">
+          <button type="button" id="add-feed-tab-rss" class="add-feed-tab add-feed-tab-active" role="tab" aria-selected="true" data-tab="rss">RSS / URL</button>
+          <button type="button" id="add-feed-tab-podcasts" class="add-feed-tab" role="tab" aria-selected="false" data-tab="podcasts">Podcasts</button>
+          <button type="button" id="add-feed-tab-youtube" class="add-feed-tab" role="tab" aria-selected="false" data-tab="youtube">YouTube</button>
+        </div>
+        <div id="add-feed-tab-rss-panel" class="add-feed-tab-panel" role="tabpanel">
+          <div class="add-feed-label-row">
+            <label for="add-feed-input-rss">RSS feed or website URL</label>
+            <a href="#help" id="add-feed-whats-this" class="add-feed-inline-link">What's this?</a>
+          </div>
+          <input type="url" id="add-feed-input-rss" placeholder="e.g. blog.substack.com or feed URL" autocomplete="url">
+          <p id="add-feed-hint-rss" class="hint"></p>
+          <div id="add-feed-pending-rss" class="add-feed-pending-list" aria-live="polite"></div>
+          <div class="add-feed-dialog-actions">
+            <button type="button" id="add-feed-cancel" class="btn-secondary">Cancel</button>
+            <button type="button" id="add-feed-submit-rss" class="btn-primary">Add feed</button>
+          </div>
+        </div>
+        <div id="add-feed-tab-podcasts-panel" class="add-feed-tab-panel" hidden role="tabpanel">
+          <label for="add-feed-input-podcasts">Search for a podcast</label>
+          <input type="text" id="add-feed-input-podcasts" placeholder="Podcast name" autocomplete="off">
+          <div id="add-feed-podcasts-results" class="add-feed-podcasts-results" aria-live="polite"></div>
+          <p id="add-feed-hint-podcasts" class="hint"></p>
+        </div>
+        <div id="add-feed-tab-youtube-panel" class="add-feed-tab-panel" hidden role="tabpanel">
+          <label for="add-feed-input-youtube">YouTube channel, video, or @handle</label>
+          <p class="hint">Paste anything — a video you're watching, a channel page, or an @handle</p>
+          <input type="text" id="add-feed-input-youtube" placeholder="youtube.com/..." autocomplete="url">
+          <p id="add-feed-hint-youtube" class="hint"></p>
+          <div id="add-feed-pending-youtube" class="add-feed-pending-list" aria-live="polite"></div>
+          <div class="add-feed-dialog-actions">
+            <button type="button" id="add-feed-cancel-yt" class="btn-secondary">Cancel</button>
+            <button type="button" id="add-feed-resolve-yt" class="btn-primary">Resolve</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
 
   <script src="js/config.js"></script>
   <script src="js/storage.js"></script>

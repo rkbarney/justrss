@@ -22,7 +22,8 @@ This app uses **no dedicated servers**. Everything runs in the browser. Feeds ar
 
 - **River of news** – All articles from all feeds in one chronological list
 - **Add feeds** – Paste a blog URL or RSS feed; the app discovers the feed when possible
-- **Swipe** – On articles: swipe left to mark read. On Feeds list: swipe left to remove (unsubscribe)
+- **Swipe** – On articles: swipe left to mark read, swipe right to hide
+- **Long-press** – On feeds list: long-press a feed for Mark all as read, Mute, or Remove
 - **Feed order** – Settings: sort feeds alphabetically or by most recent update
 - **Offline** – Service worker caches the app and articles for offline reading
 - **Install** – Add to home screen on iOS/Android for an app-like experience. After we deploy updates, **close the app and reopen it** (or pull-to-refresh on the main list) to get the latest version; the app is cached for offline use.
@@ -45,11 +46,11 @@ This app uses **no dedicated servers**. Everything runs in the browser. Feeds ar
 - You can paste either a **website URL** (e.g. `https://waitbutwhy.com`) or a **direct feed URL** (e.g. `https://waitbutwhy.com/feed`).
 - If you paste a website URL, the app will try to discover the RSS/Atom link from the page.
 - **YouTube:** Paste a channel URL (e.g. `youtube.com/@channel` or `youtube.com/channel/UC...`). The app resolves @handles to channel ID by trying the [Piped](https://docs.piped.video/docs/api-documentation/) API first (fast), then CORS proxies if needed. Feed options (All, Videos, Shorts, Live, playlists) are built from the channel ID; only custom playlists require a channel-page fetch.
-- If a feed fails to load, try another **CORS proxy** in Settings (e.g. AllOrigins, CorsProxy.io, RSS2JSON).
+- If a feed fails to load, check your **CORS proxy URL** in Settings.
 
 ## Deploy your own CORS proxy
 
-The app can use third-party proxies (AllOrigins, CorsProxy.io), but you can run your own for free on Cloudflare Workers. No credit card required for the free tier (100,000 requests/day).
+The app needs a CORS proxy to fetch feeds. You can run your own for free on Cloudflare Workers. No credit card required for the free tier (100,000 requests/day).
 
 1. **Install Wrangler** (Cloudflare's CLI):
    ```bash
@@ -70,9 +71,9 @@ The app can use third-party proxies (AllOrigins, CorsProxy.io), but you can run 
 
 4. **Copy the URL** Wrangler prints (e.g. `https://justrss-proxy.yourname.workers.dev`).
 
-5. **In JustRSS:** Open **Settings** → **Feed proxy (CORS)** → select **Self-hosted (recommended)** → paste your worker URL (e.g. `https://justrss-proxy.yourname.workers.dev`).
+5. **In JustRSS:** Open **Settings** → **CORS proxy URL(s)** → paste your worker URL (e.g. `https://justrss-proxy.yourname.workers.dev/?url=`). Add more URLs (one per line) as fallbacks if needed.
 
-Your feeds will now go through your own proxy. No logging, no third parties.
+Your feeds will now go through your own proxy. The worker checks Referer (only JustRSS domains), validates URLs, blocks private IPs, and rate limits to 120 requests/minute per IP. No logging, no third parties.
 
 **Make it the default for your hosted version:** Edit `js/config.js` and set `defaultProxyUrl` to your worker URL. New visitors to your deployment will use your proxy by default.
 

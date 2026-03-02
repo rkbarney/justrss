@@ -9,9 +9,10 @@ function getProxyUrl(proxyBase, feedUrl) {
   return `${proxyBase}${encodeURIComponent(feedUrl)}`;
 }
 
-async function fetchFeed(url, proxyBase) {
+async function fetchFeed(url, proxyBase, options = {}) {
   const fullUrl = getProxyUrl(proxyBase, url);
-  const res = await fetch(fullUrl);
+  const init = options.noCache ? { cache: 'no-store' } : {};
+  const res = await fetch(fullUrl, init);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const text = await res.text();
   if (proxyBase.includes('rss2json')) {
@@ -37,6 +38,7 @@ function parseRSS2JSON(data) {
           durationSeconds = parts.reduce((acc, p, i) => acc + p * Math.pow(60, i), 0);
         }
       }
+      const isPodcast = durationSeconds > 0 || (item.enclosure?.type || '').startsWith('audio/');
       return {
         title: item.title || '(No title)',
         link: item.link || item.url || '',
@@ -45,6 +47,7 @@ function parseRSS2JSON(data) {
         author: item.author || '',
         image: item.thumbnail || item.enclosure?.link || '',
         durationSeconds: durationSeconds || undefined,
+        isPodcast,
       };
     }),
   };
@@ -83,8 +86,21 @@ function parseRSS(doc) {
     const author = item.querySelector('creator')?.textContent?.trim()
       || item.querySelector('author')?.textContent?.trim() || '';
     const enclosure = item.querySelector('enclosure');
-    const image = enclosure?.getAttribute('type')?.startsWith('image/')
-      ? enclosure.getAttribute('url') : '';
+    const enclosureType = enclosure?.getAttribute('type') || '';
+    const image = enclosureType.startsWith('image/') ? enclosure.getAttribute('url') : '';
+    const isAudio = enclosureType.startsWith('audio/');
+    let durationSeconds = 0;
+    const itunesNs = 'http://www.itunes.com/dtds/podcast-1.0.dtd';
+    const durationEl = item.getElementsByTagNameNS(itunesNs, 'duration')[0];
+    if (durationEl) {
+      const raw = (durationEl.textContent || '').trim();
+      const sec = parseInt(raw, 10);
+      if (!Number.isNaN(sec)) durationSeconds = sec;
+      else if (raw.includes(':')) {
+        const parts = raw.split(':').map((p) => parseInt(p, 10) || 0).reverse();
+        durationSeconds = parts.reduce((acc, p, i) => acc + p * Math.pow(60, i), 0);
+      }
+    }
 
     items.push({
       title: itemTitle,
@@ -93,6 +109,8 @@ function parseRSS(doc) {
       published: Number.isNaN(published) ? Date.now() : published,
       author,
       image: image || '',
+      durationSeconds: durationSeconds || undefined,
+      isPodcast: isAudio || (durationSeconds > 0),
     });
   });
 
@@ -119,8 +137,8 @@ function parseAtom(doc) {
     if (!content && mediaDesc) content = mediaDesc.textContent?.trim() || '';
     const mediaThumb = entry.getElementsByTagNameNS(mediaNs, 'thumbnail')[0];
     const thumbUrl = mediaThumb?.getAttribute('url') || '';
-    const updated = entry.querySelector('updated') || entry.querySelector('published');
-    const published = updated ? new Date(updated.textContent).getTime() : Date.now();
+    const dateEl = entry.querySelector('published') || entry.querySelector('updated');
+    const published = dateEl ? new Date(dateEl.textContent).getTime() : Date.now();
     const authorEl = entry.querySelector('author name');
     const author = authorEl?.textContent?.trim() || '';
     let durationSeconds = 0;
@@ -172,6 +190,73 @@ function getYouTubeChannelIdFromUrl(inputUrl) {
   } catch {
     return null;
   }
+}
+
+/**
+ * Check if URL is a YouTube video (watch or youtu.be). Returns true if so.
+ */
+function isYouTubeVideoUrl(inputUrl) {
+  try {
+    const url = new URL(inputUrl.startsWith('http') ? inputUrl : 'https://' + inputUrl);
+    const host = url.hostname.toLowerCase();
+    if (host === 'youtu.be') return url.pathname.length > 1;
+    if (host !== 'www.youtube.com' && host !== 'youtube.com' && host !== 'm.youtube.com') return false;
+    return url.pathname === '/watch' && url.searchParams.has('v');
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Resolve YouTube video URL to channel ID. Fetches video page via proxy and extracts channelId.
+ */
+async function resolveYouTubeChannelIdFromVideoUrl(videoUrl, proxyBase) {
+  let pageUrl;
+  try {
+    const url = new URL(videoUrl.startsWith('http') ? videoUrl : 'https://' + videoUrl);
+    const host = url.hostname.toLowerCase();
+    if (host === 'youtu.be') {
+      const vid = url.pathname.slice(1).split('/')[0];
+      if (!vid) return null;
+      pageUrl = `https://www.youtube.com/watch?v=${vid}`;
+    } else {
+      const v = url.searchParams.get('v');
+      if (!v) return null;
+      pageUrl = `https://www.youtube.com/watch?v=${v}`;
+    }
+  } catch {
+    return null;
+  }
+  try {
+    const fullUrl = getProxyUrl(proxyBase, pageUrl);
+    const res = await fetch(fullUrl);
+    if (!res.ok) return null;
+    const html = await res.text();
+    const channelId = extractChannelIdFromHtml(html);
+    return channelId && /^UC[\w-]{21,24}$/i.test(channelId) ? channelId : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Unified resolver: any YouTube URL (channel, video, @handle, youtu.be) → channelId.
+ * Uses resolveYouTubeChannelIdParallel for handles; resolveYouTubeChannelIdFromVideoUrl for videos.
+ */
+async function resolveYouTubeUrl(inputUrl, proxyList) {
+  const normalized = (inputUrl || '').trim();
+  if (!normalized) return null;
+  const url = normalized.startsWith('http') ? normalized : (normalized.startsWith('@') ? `https://www.youtube.com/${normalized}` : `https://${normalized}`);
+  const channelId = getYouTubeChannelIdFromUrl(url);
+  if (channelId) return channelId;
+  if (isYouTubeVideoUrl(url)) {
+    for (const proxy of proxyList) {
+      const id = await resolveYouTubeChannelIdFromVideoUrl(url, proxy);
+      if (id) return id;
+    }
+    return null;
+  }
+  return resolveYouTubeChannelIdParallel(url, proxyList);
 }
 
 /**
@@ -429,8 +514,9 @@ async function normalizeInputToFeedUrl(inputUrl, proxyBase) {
     return base + '/feed';
   }
 
-  if (host === 'www.youtube.com' || host === 'youtube.com' || host === 'm.youtube.com') {
-    const channelId = await resolveYouTubeChannelId(inputUrl, proxyBase);
+  if (host === 'www.youtube.com' || host === 'youtube.com' || host === 'm.youtube.com' || host === 'youtu.be') {
+    if (url.pathname.includes('feeds/videos.xml')) return null;
+    const channelId = await resolveYouTubeUrl(inputUrl, [proxyBase]);
     if (channelId) return `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
   }
 
@@ -464,8 +550,8 @@ const YOUTUBE_GENERIC_TITLES = ['Videos', 'Shorts', 'Live', 'All'];
  * Fetch, parse, and return normalized feed + items.
  * For YouTube feeds with generic channel title (e.g. "Videos"), use first item's author as channel name.
  */
-async function fetchAndParse(feedUrl, proxyBase) {
-  const result = await fetchFeed(feedUrl, proxyBase);
+async function fetchAndParse(feedUrl, proxyBase, options = {}) {
+  const result = await fetchFeed(feedUrl, proxyBase, options);
   let feed;
   if (result.type === 'rss2json') {
     feed = parseRSS2JSON(result.data);
@@ -490,7 +576,10 @@ window.FeedParser = {
   normalizeInputToFeedUrl,
   resolveYouTubeChannelId,
   resolveYouTubeChannelIdParallel,
+  resolveYouTubeUrl,
+  resolveYouTubeChannelIdFromVideoUrl,
   getYouTubeChannelIdFromUrl,
+  isYouTubeVideoUrl,
   getYouTubeFeedsFromChannelId,
   getYouTubeCustomPlaylistsFromPage,
   getYouTubeFeedsFromPage,
