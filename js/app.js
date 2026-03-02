@@ -42,7 +42,7 @@
 
   async function refreshAllFeeds() {
     const settings = Storage.getSettings();
-    const proxy = settings.proxy || 'https://api.allorigins.win/raw?url=';
+    const proxy = getEffectiveProxy(settings);
     const loading = document.getElementById('loading-articles');
     if (loading) loading.hidden = false;
     const forceHide = setTimeout(() => {
@@ -193,9 +193,27 @@
     'https://api.rss2json.com/v1/api.json?rss_url=',
   ];
 
+  const SELF_HOSTED = '__self_hosted__';
+
+  function normalizeProxyUrl(url) {
+    if (!url || !url.trim()) return '';
+    const u = url.trim().replace(/\/$/, '');
+    if (/[?&]url=/.test(u)) return u;
+    return u + '/?url=';
+  }
+
+  function getEffectiveProxy(settings) {
+    const p = settings?.proxy || PROXIES[0];
+    if (p === SELF_HOSTED) {
+      const selfUrl = normalizeProxyUrl(settings?.proxySelfHosted || '');
+      return selfUrl || PROXIES[0];
+    }
+    return p;
+  }
+
   function getProxyList() {
     const settings = Storage.getSettings();
-    const preferred = settings.proxy || PROXIES[0];
+    const preferred = getEffectiveProxy(settings);
     return PROXIES.includes(preferred)
       ? [preferred, ...PROXIES.filter((p) => p !== preferred)]
       : [preferred, ...PROXIES];
@@ -645,6 +663,9 @@
     document.getElementById('setting-font-size').value = String(s.fontSize);
     document.getElementById('setting-font-family').value = s.fontFamily || 'times';
     document.getElementById('setting-proxy').value = s.proxy;
+    document.getElementById('setting-proxy-self-hosted').value = s.proxySelfHosted || '';
+    const proxyWrap = document.getElementById('setting-proxy-self-hosted-wrap');
+    if (proxyWrap) proxyWrap.hidden = s.proxy !== SELF_HOSTED;
     document.getElementById('setting-feed-order').value = s.feedOrder || 'alphabetical';
 
     document.getElementById('setting-theme')?.addEventListener('change', (e) => {
@@ -674,6 +695,11 @@
     });
     document.getElementById('setting-proxy')?.addEventListener('change', (e) => {
       s.proxy = e.target.value;
+      Storage.saveSettings(s);
+      if (proxyWrap) proxyWrap.hidden = s.proxy !== SELF_HOSTED;
+    });
+    document.getElementById('setting-proxy-self-hosted')?.addEventListener('input', (e) => {
+      s.proxySelfHosted = e.target.value.trim();
       Storage.saveSettings(s);
     });
     document.getElementById('setting-feed-order')?.addEventListener('change', (e) => {
@@ -726,9 +752,9 @@
       for (const f of imported) {
         try {
           let feedUrl = f.url;
-          const normalized = await FeedParser.normalizeInputToFeedUrl(f.url, settings.proxy);
+          const normalized = await FeedParser.normalizeInputToFeedUrl(f.url, getEffectiveProxy(settings));
           if (normalized) feedUrl = normalized;
-          const parsed = await FeedParser.fetchAndParse(feedUrl, settings.proxy);
+          const parsed = await FeedParser.fetchAndParse(feedUrl, getEffectiveProxy(settings));
           let title = (f.title && f.title.trim()) ? f.title.trim() : (parsed.title || '');
           const generic = ['Videos', 'Shorts', 'Live', 'All'];
           if (feedUrl.includes('youtube.com/feeds/videos.xml') && generic.some((g) => title === g || title.startsWith(g))) {

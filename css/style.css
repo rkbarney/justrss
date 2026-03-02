@@ -634,6 +634,28 @@ body[data-font-family="courier"] {
   font-family: inherit;
 }
 
+.setting-proxy-self-hosted {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 0 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.setting-proxy-self-hosted label {
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.setting-proxy-self-hosted input {
+  padding: 8px;
+  font-size: 0.9rem;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-family: inherit;
+}
+
 .setting-actions {
   margin-top: 16px;
   display: flex;

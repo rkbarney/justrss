@@ -1,10 +1,11 @@
-const CACHE_NAME = 'justrss-v2';
+const CACHE_NAME = 'justrss-c51750a';
 const base = self.location.pathname.replace(/\/[^/]*$/, '/') || '/';
 const SHELL_URLS = [
   base,
   base + 'index.html',
   base + 'manifest.json',
   base + 'css/style.css',
+  base + 'js/config.js',
   base + 'js/app.js',
   base + 'js/feed-parser.js',
   base + 'js/storage.js',

@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "test": "node --test tests/",
-    "generate-icons": "node scripts/generate-icons.js"
+    "generate-icons": "node scripts/generate-icons.js",
+    "bump-cache": "node scripts/bump-cache.js",
+    "deploy": "npm run bump-cache"
   },
   "devDependencies": {
     "jsdom": "^25.0.0",

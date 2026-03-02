@@ -47,6 +47,35 @@ This app uses **no dedicated servers**. Everything runs in the browser. Feeds ar
 - **YouTube:** Paste a channel URL (e.g. `youtube.com/@channel` or `youtube.com/channel/UC...`). The app resolves @handles to channel ID by trying the [Piped](https://docs.piped.video/docs/api-documentation/) API first (fast), then CORS proxies if needed. Feed options (All, Videos, Shorts, Live, playlists) are built from the channel ID; only custom playlists require a channel-page fetch.
 - If a feed fails to load, try another **CORS proxy** in Settings (e.g. AllOrigins, CorsProxy.io, RSS2JSON).
 
+## Deploy your own CORS proxy
+
+The app can use third-party proxies (AllOrigins, CorsProxy.io), but you can run your own for free on Cloudflare Workers. No credit card required for the free tier (100,000 requests/day).
+
+1. **Install Wrangler** (Cloudflare's CLI):
+   ```bash
+   npm install -g wrangler
+   ```
+
+2. **Log in to Cloudflare** (creates a free account if you don't have one):
+   ```bash
+   wrangler login
+   ```
+   A browser window will open; sign in or sign up.
+
+3. **Deploy the worker** from the project root:
+   ```bash
+   cd worker
+   wrangler deploy
+   ```
+
+4. **Copy the URL** Wrangler prints (e.g. `https://justrss-proxy.yourname.workers.dev`).
+
+5. **In JustRSS:** Open **Settings** → **Feed proxy (CORS)** → select **Self-hosted (recommended)** → paste your worker URL (e.g. `https://justrss-proxy.yourname.workers.dev`).
+
+Your feeds will now go through your own proxy. No logging, no third parties.
+
+**Make it the default for your hosted version:** Edit `js/config.js` and set `defaultProxyUrl` to your worker URL. New visitors to your deployment will use your proxy by default.
+
 ## Testing
 
 Run the OPML and feed-parser tests:
@@ -67,10 +96,14 @@ Tests cover OPML import/export (parse, round-trip, various formats) and feed par
 ├── service-worker.js
 ├── css/style.css
 ├── js/
+│   ├── config.js        # optional: set defaultProxyUrl for your hosted deployment
 │   ├── app.js
 │   ├── feed-parser.js
 │   ├── storage.js
 │   └── ui.js
+├── worker/
+│   ├── index.js         # Cloudflare Worker CORS proxy (optional)
+│   └── wrangler.toml
 ├── icons/
 │   ├── icon-192.png
 │   └── icon-512.png
@@ -100,6 +133,8 @@ Tests cover OPML import/export (parse, round-trip, various formats) and feed par
    - Folder: **/ (root)**
    - Save
 4. Your site will be live at `https://YOUR_USERNAME.github.io/justrss/` in a minute or two.
+
+**Before each push:** `npm run deploy` (or `npm run bump-cache`) bumps the service worker cache so browsers fetch fresh files. Include the updated `service-worker.js` in your commit.
 
 The app uses relative paths, so it works both locally and on GitHub Pages. For installable PWA (Add to Home Screen), HTTPS is required—GitHub Pages provides that automatically.
 

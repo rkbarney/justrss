@@ -246,12 +246,14 @@ async function restoreHiddenArticles() {
 // --- Settings (localStorage) ---
 
 const SETTINGS_KEY = 'justrss-settings';
+const _defaultProxyUrl = (typeof window !== 'undefined' && window.JUSTRSS_CONFIG?.defaultProxyUrl) || '';
 const DEFAULTS = {
   theme: 'auto',
   refreshInterval: 30,
   fontSize: 18,
   fontFamily: 'times',
-  proxy: 'https://api.allorigins.win/raw?url=',
+  proxy: _defaultProxyUrl ? '__self_hosted__' : 'https://api.allorigins.win/raw?url=',
+  proxySelfHosted: _defaultProxyUrl,
   postsPerPage: 15,
   feedOrder: 'alphabetical',
 };
