@@ -278,7 +278,6 @@ const DEFAULTS = {
   proxyUrls: _defaultProxyUrl || '',
   postsPerPage: 15,
   feedOrder: 'alphabetical',
-  hideReadArticles: false,
   navPosition: 'top',
 };
 

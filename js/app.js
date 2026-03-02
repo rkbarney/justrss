@@ -126,7 +126,6 @@
     return {
       limit: s.postsPerPage || 15,
       excludeFeedIds: excludeMuted,
-      unreadOnly: !!s.hideReadArticles,
       ...overrides,
     };
   }
@@ -382,7 +381,8 @@
   function isSubstackUrl(url) {
     try {
       const u = new URL(url.startsWith('http') ? url : 'https://' + url);
-      return u.hostname.toLowerCase().endsWith('.substack.com');
+      const h = u.hostname.toLowerCase();
+      return h.endsWith('.substack.com') || h === 'substack.com' || h === 'www.substack.com';
     } catch {
       return false;
     }
@@ -736,8 +736,10 @@
       if (isSubstackUrl(url)) {
         try {
           const u = new URL(url);
-          const feedUrl = u.origin.replace(/\/$/, '') + '/feed';
-          const subName = u.hostname.replace(/^www\./, '').replace(/\.substack\.com$/, '') || u.hostname;
+          const base = u.origin.replace(/\/$/, '');
+          const path = u.pathname.replace(/\/p\/[^/]*$/, '').replace(/\/$/, '') || '';
+          const feedUrl = base + path + '/feed';
+          const subName = u.hostname.replace(/^www\./, '').replace(/\.substack\.com$/, '') || u.pathname.split('/')[1] || u.hostname;
           const ok = await addFeedByUrl(feedUrl, subName);
           if (ok) closeAddFeedDialog();
         } catch {
@@ -896,7 +898,6 @@
     const s = Storage.getSettings();
     document.getElementById('setting-color-scheme').value = s.colorScheme || 'system';
     document.getElementById('setting-style').value = s.style || 'minimal';
-    document.getElementById('setting-hide-read').checked = !!s.hideReadArticles;
     document.getElementById('setting-nav-position').value = s.navPosition || 'top';
     document.getElementById('setting-refresh').value = String(s.refreshInterval);
     document.getElementById('setting-posts-per-page').value = String(s.postsPerPage ?? 15);
@@ -914,11 +915,6 @@
       s.style = e.target.value;
       Storage.saveSettings(s);
       UI.setTheme(s.colorScheme, s.style);
-    });
-    document.getElementById('setting-hide-read')?.addEventListener('change', (e) => {
-      s.hideReadArticles = e.target.checked;
-      Storage.saveSettings(s);
-      renderAll();
     });
     document.getElementById('setting-nav-position')?.addEventListener('change', (e) => {
       s.navPosition = e.target.value;

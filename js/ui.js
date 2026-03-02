@@ -128,10 +128,8 @@ const UI = {
       emptyEl.hidden = articles.length > 0;
       if (articles.length === 0) {
         const newUser = document.getElementById('empty-state-new-user');
-        const allRead = document.getElementById('empty-state-all-read');
         const showAllRead = (options.feedsLength || 0) > 0;
         if (newUser) newUser.hidden = showAllRead;
-        if (allRead) allRead.hidden = !showAllRead;
         const loadMoreWrap = document.getElementById('load-more-all-wrap');
         if (loadMoreWrap) loadMoreWrap.hidden = true;
       }

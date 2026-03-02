@@ -508,10 +508,12 @@ async function normalizeInputToFeedUrl(inputUrl, proxyBase) {
     return null;
   }
   const host = url.hostname.toLowerCase();
+  const isSubstack = host.endsWith('.substack.com') || host === 'substack.com' || host === 'www.substack.com';
 
-  if (host.endsWith('.substack.com')) {
+  if (isSubstack) {
     const base = url.origin.replace(/\/$/, '');
-    return base + '/feed';
+    const path = url.pathname.replace(/\/p\/[^/]*$/, '').replace(/\/$/, '') || '';
+    return base + path + '/feed';
   }
 
   if (host === 'www.youtube.com' || host === 'youtube.com' || host === 'm.youtube.com' || host === 'youtu.be') {
