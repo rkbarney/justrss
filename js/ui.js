@@ -25,27 +25,36 @@ const UI = {
     document.body.setAttribute('data-article-font', String(size));
   },
 
+  setFontFamily(fontFamily) {
+    document.body.setAttribute('data-font-family', fontFamily || 'times');
+  },
+
   showView(viewId) {
     document.querySelectorAll('.view').forEach((v) => v.classList.remove('view-active'));
     const view = document.getElementById(`view-${viewId}`);
     if (view) view.classList.add('view-active');
 
+    const loading = document.getElementById('loading-articles');
+    if (loading) loading.hidden = true;
+
     const title = document.getElementById('view-title');
-    const titles = { all: 'JustRSS', feeds: 'Feeds', settings: 'Settings', about: 'About', article: '' };
-    title.textContent = titles[viewId] || 'Article';
+    if (title && viewId !== 'article') title.textContent = 'JustRSS';
 
     const backBtn = document.getElementById('btn-back');
     backBtn.hidden = viewId !== 'article';
-    const installBtn = document.getElementById('btn-install-main');
-    if (installBtn) installBtn.hidden = viewId !== 'all';
+    const headerMain = document.querySelector('.app-header-main');
+    if (headerMain) headerMain.hidden = viewId === 'article';
 
-    document.querySelectorAll('.nav-item').forEach((n) => {
-      n.classList.toggle('nav-active', n.getAttribute('data-view') === viewId);
-      n.setAttribute('aria-current', n.getAttribute('data-view') === viewId ? 'page' : null);
+    document.querySelectorAll('.header-nav-link[data-view], #view-title').forEach((n) => {
+      const nView = n.getAttribute('data-view');
+      if (nView) {
+        n.classList.toggle('nav-active', nView === viewId);
+        n.setAttribute('aria-current', nView === viewId ? 'page' : null);
+      }
     });
 
     if (viewId === 'article') return;
-    const scrollEl = view?.querySelector('.article-list, .feed-list, .settings-list, .about-content');
+    const scrollEl = viewId === 'feeds' ? view : view?.querySelector('.article-list, .feed-list, .settings-list, .about-content');
     if (scrollEl && UI.scrollPositions[viewId] != null) {
       scrollEl.scrollTop = UI.scrollPositions[viewId];
     }
@@ -53,7 +62,7 @@ const UI = {
 
   saveScroll(viewId) {
     const view = document.getElementById(`view-${viewId}`);
-    const scrollEl = view?.querySelector('.article-list, .feed-list, .about-content');
+    const scrollEl = viewId === 'feeds' ? view : view?.querySelector('.article-list, .feed-list, .about-content');
     if (scrollEl) UI.scrollPositions[viewId] = scrollEl.scrollTop;
   },
 
@@ -95,12 +104,12 @@ const UI = {
         metaParts.push(window.FeedParser.formatDuration(a.durationSeconds));
       }
       const el = document.createElement('div');
-      el.className = 'article-item' + (a.read ? '' : ' unread') + (a.starred ? ' starred' : '');
+      el.className = 'article-item' + (a.read ? '' : ' unread');
       el.setAttribute('role', 'listitem');
       el.dataset.articleId = a.id;
       el.innerHTML = `
         <span class="article-item-swipe-hint left" aria-hidden="true">Read</span>
-        <span class="article-item-star" aria-hidden="true">★</span>
+        <span class="article-item-swipe-hint right" aria-hidden="true">Hide</span>
         <h2 class="article-item-title">${UI.escapeHtml(a.title)}</h2>
         <div class="article-item-meta">${metaParts.join(' · ')}</div>
       `;
@@ -117,13 +126,19 @@ const UI = {
 
     feeds.forEach((f) => {
       const unread = unreadCounts[f.id] || 0;
+      const muted = !!f.muted;
+      const hasNew = unread > 0;
       const el = document.createElement('div');
-      el.className = 'feed-item';
+      el.className = 'feed-item' + (muted ? ' muted' : '') + (hasNew ? ' has-new' : '');
       el.dataset.feedId = f.id;
       el.innerHTML = `
         <span class="feed-item-swipe-hint left" aria-hidden="true">Remove</span>
+        <span class="feed-item-swipe-hint right" aria-hidden="true">${muted ? 'Unmute' : 'Mute'}</span>
         <div class="feed-item-info">
-          <div class="feed-item-title">${UI.escapeHtml(f.title || f.url)}</div>
+          <div class="feed-item-title">
+            ${UI.escapeHtml(f.title || f.url)}
+            ${hasNew ? '<span class="feed-item-new-dot" aria-hidden="true"></span>' : ''}
+          </div>
           <div class="feed-item-meta">${unread} unread</div>
         </div>
         <div class="feed-item-actions">
@@ -140,11 +155,17 @@ const UI = {
       ? `${UI.escapeHtml(feed.title)} · ${UI.formatDate(article?.published)}`
       : '';
     const body = document.getElementById('article-body');
-    if (article?.content) {
-      body.innerHTML = article.content;
-    } else {
-      body.innerHTML = '<p>No content.</p>';
+    const content = (article?.content || '').trim();
+    let html = '';
+    if (article?.image && /^https?:\/\//i.test(article.image)) {
+      html += `<p><img src="${article.image.replace(/"/g, '&quot;')}" alt="" style="max-width:100%;height:auto;"></p>`;
     }
+    if (content) {
+      html += content;
+    } else {
+      html += '<p class="no-preview">No preview available. Tap "Open in browser" below to read the full article.</p>';
+    }
+    body.innerHTML = html;
     const link = document.getElementById('article-link');
     link.href = article?.link || '#';
     link.setAttribute('href', article?.link || '#');

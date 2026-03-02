@@ -4,6 +4,10 @@ A mobile-first RSS reader that runs **entirely in your browser**. No backend, no
 
 Central idea: **browsing should be intentional, not addictive.** Plain design on purpose; no engagement tricks.
 
+## Why this exists
+
+Every other RSS reader I found was either paid, involved some form of tracking, or had so much feature bloat and discoverability stuff that it felt nearly identical to what I was trying to escape. JustRSS is the opposite: no account, no sync, no algorithm, no feed recommendations. Just your subscriptions in a chronological list. Nothing more.
+
 ## Intentionally lightweight
 
 This app uses **no dedicated servers**. Everything runs in the browser. Feeds are fetched via public CORS proxies when needed, and data lives only on your device (IndexedDB + localStorage). The trade-off: some operations (e.g. resolving a YouTube @handle) can be a bit slower than services that run their own backend.
@@ -43,6 +47,17 @@ This app uses **no dedicated servers**. Everything runs in the browser. Feeds ar
 - **YouTube:** Paste a channel URL (e.g. `youtube.com/@channel` or `youtube.com/channel/UC...`). The app resolves @handles to channel ID by trying the [Piped](https://docs.piped.video/docs/api-documentation/) API first (fast), then CORS proxies if needed. Feed options (All, Videos, Shorts, Live, playlists) are built from the channel ID; only custom playlists require a channel-page fetch.
 - If a feed fails to load, try another **CORS proxy** in Settings (e.g. AllOrigins, CorsProxy.io, RSS2JSON).
 
+## Testing
+
+Run the OPML and feed-parser tests:
+
+```bash
+npm install
+npm test
+```
+
+Tests cover OPML import/export (parse, round-trip, various formats) and feed parsing (RSS 2.0, Atom, YouTube Atom, RSS2JSON).
+
 ## File structure
 
 ```
@@ -61,6 +76,9 @@ This app uses **no dedicated servers**. Everything runs in the browser. Feeds ar
 │   └── icon-512.png
 ├── scripts/
 │   └── generate-icons.js   # optional: npm install pngjs && node scripts/generate-icons.js
+├── tests/
+│   ├── opml.test.js        # OPML import/export tests
+│   └── feed-parser.test.js # RSS/Atom parsing tests
 └── README.md
 ```
 

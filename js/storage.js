@@ -122,6 +122,8 @@ async function getArticles(options = {}) {
     const req = range ? idx.getAll(range) : idx.getAll();
     req.onsuccess = () => {
       let list = req.result || [];
+      if (options.excludeFeedIds?.length) list = list.filter((a) => !options.excludeFeedIds.includes(a.feedId));
+      if (options.excludeHidden !== false) list = list.filter((a) => !a.hidden);
       if (options.starredOnly) list = list.filter((a) => a.starred);
       if (options.unreadOnly) list = list.filter((a) => !a.read);
       list.sort((a, b) => (b.published || 0) - (a.published || 0));
@@ -167,6 +169,7 @@ async function upsertArticles(feedId, items) {
       durationSeconds: item.durationSeconds,
       read: existingIds.has(id) ? (existing.find((a) => a.id === id)?.read ?? false) : false,
       starred: existingIds.has(id) ? (existing.find((a) => a.id === id)?.starred ?? false) : false,
+      hidden: existingIds.has(id) ? (existing.find((a) => a.id === id)?.hidden ?? false) : false,
     };
     toPut.push(rec);
   }
@@ -205,6 +208,41 @@ async function markArticleStarred(articleId, starred = true) {
   });
 }
 
+async function markArticleHidden(articleId, hidden = true) {
+  const a = await getArticle(articleId);
+  if (!a) return;
+  a.hidden = hidden;
+  const database = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = database.transaction(STORE_ARTICLES, 'readwrite');
+    tx.objectStore(STORE_ARTICLES).put(a);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function restoreHiddenArticles() {
+  const database = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = database.transaction(STORE_ARTICLES, 'readwrite');
+    const store = tx.objectStore(STORE_ARTICLES);
+    const req = store.openCursor();
+    req.onsuccess = () => {
+      const cursor = req.result;
+      if (cursor) {
+        if (cursor.value.hidden) {
+          cursor.value.hidden = false;
+          cursor.update(cursor.value);
+        }
+        cursor.continue();
+      } else {
+        resolve();
+      }
+    };
+    req.onerror = () => reject(req.error);
+  });
+}
+
 // --- Settings (localStorage) ---
 
 const SETTINGS_KEY = 'justrss-settings';
@@ -212,6 +250,7 @@ const DEFAULTS = {
   theme: 'auto',
   refreshInterval: 30,
   fontSize: 18,
+  fontFamily: 'times',
   proxy: 'https://api.allorigins.win/raw?url=',
   postsPerPage: 15,
   feedOrder: 'alphabetical',
@@ -295,6 +334,8 @@ window.Storage = {
   upsertArticles,
   markArticleRead,
   markArticleStarred,
+  markArticleHidden,
+  restoreHiddenArticles,
   getSettings,
   saveSettings,
   exportOPML,

@@ -16,6 +16,7 @@
     const s = Storage.getSettings();
     UI.setTheme(s.theme);
     UI.setFontSize(s.fontSize);
+    UI.setFontFamily(s.fontFamily);
   }
 
   async function loadFeeds() {
@@ -44,6 +45,9 @@
     const proxy = settings.proxy || 'https://api.allorigins.win/raw?url=';
     const loading = document.getElementById('loading-articles');
     if (loading) loading.hidden = false;
+    const forceHide = setTimeout(() => {
+      if (loading) loading.hidden = true;
+    }, 30000);
     try {
       for (const feed of feeds) {
         try {
@@ -58,10 +62,25 @@
         }
       }
     } finally {
+      clearTimeout(forceHide);
       if (loading) loading.hidden = true;
     }
     await renderAll();
     scheduleRefresh();
+    showToast('Refreshed');
+  }
+
+  function showToast(message) {
+    const toast = document.getElementById('toast');
+    if (!toast) return;
+    toast.textContent = message;
+    toast.hidden = false;
+    toast.classList.add('visible');
+    clearTimeout(showToast._tid);
+    showToast._tid = setTimeout(() => {
+      toast.classList.remove('visible');
+      setTimeout(() => { toast.hidden = true; }, 200);
+    }, 2000);
   }
 
   function scheduleRefresh() {
@@ -77,12 +96,16 @@
     if (loading) loading.hidden = true;
     await loadFeeds();
     const limit = Storage.getSettings().postsPerPage || 15;
+    const excludeMuted = feeds.filter((f) => f.muted).map((f) => f.id);
     const [articles, unreadCounts] = await Promise.all([
-      Storage.getArticles({ limit }),
+      Storage.getArticles({ limit, excludeFeedIds: excludeMuted }),
       getUnreadCounts(),
     ]);
 
     allArticles = articles;
+
+    const viewTitle = document.getElementById('view-title');
+    if (viewTitle) viewTitle.textContent = 'JustRSS';
 
     UI.renderArticleList('article-list', allArticles, feedMap, { emptyId: 'empty-state' });
     UI.renderFeedList(feeds, unreadCounts);
@@ -123,7 +146,10 @@
       Storage.markArticleRead(id, true);
       el.classList.remove('unread');
       renderAll();
-    }, () => {});
+    }, async () => {
+      await Storage.markArticleHidden(id, true);
+      renderAll();
+    });
   }
 
   function attachFeedItemListeners(el) {
@@ -151,7 +177,14 @@
       if (confirm('Remove this feed?')) {
         Storage.deleteFeed(feedId).then(() => renderAll());
       }
-    }, () => {});
+    }, async () => {
+      const feed = feedMap[feedId];
+      if (feed) {
+        feed.muted = !feed.muted;
+        await Storage.updateFeed(feed);
+        await renderAll();
+      }
+    });
   }
 
   const PROXIES = [
@@ -198,6 +231,31 @@
     return 'Could not load feed. Try another proxy in Settings.';
   }
 
+  /** Resolve YouTube feed title when it's generic (Videos, Shorts, Live, All). */
+  async function resolveYouTubeFeedTitle(feedUrl, parsed, proxyList) {
+    if (!feedUrl?.includes('youtube.com/feeds/videos.xml') || !parsed) return parsed?.title || '';
+    const generic = ['Videos', 'Shorts', 'Live', 'All'];
+    const title = parsed.title || '';
+    if (!generic.some((g) => title === g || title.startsWith(g))) return title;
+    const typeMatch = feedUrl.match(/playlist_id=(UULF|UUSH|UULV)([\w-]+)/);
+    const channelId = typeMatch ? 'UC' + typeMatch[2] : (feedUrl.match(/channel_id=([^&]+)/) || [])[1];
+    if (!channelId || !typeMatch) return title;
+    for (const proxy of proxyList) {
+      try {
+        const allUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
+        const allFeed = await FeedParser.fetchAndParse(allUrl, proxy);
+        if (allFeed?.title) {
+          const typeLabel = generic.find((g) => title === g || title.startsWith(g + ' -')) || title;
+          return allFeed.title + ' - ' + typeLabel;
+        }
+        break;
+      } catch (e) {
+        continue;
+      }
+    }
+    return title;
+  }
+
   /** Fetch feed in background and update storage. Called after feed is added with "Loading…". */
   async function fetchFeedInBackground(feedId, feedUrl) {
     const proxyList = getProxyList();
@@ -220,27 +278,7 @@
       await renderAll();
       return;
     }
-    let title = parsed.title;
-    if (feedUrl.includes('youtube.com/feeds/videos.xml')) {
-      const generic = ['Videos', 'Shorts', 'Live'];
-      const typeMatch = feedUrl.match(/playlist_id=(UULF|UUSH|UULV)([\w-]+)/);
-      const channelId = typeMatch ? 'UC' + typeMatch[2] : (feedUrl.match(/channel_id=([^&]+)/) || [])[1];
-      if (channelId && typeMatch && generic.some((g) => title === g || title.startsWith(g))) {
-        for (const proxy of proxyList) {
-          try {
-            const allUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
-            const allFeed = await FeedParser.fetchAndParse(allUrl, proxy);
-            if (allFeed && allFeed.title) {
-              const typeLabel = generic.find((g) => title === g || title.startsWith(g + ' -')) || title;
-              title = allFeed.title + ' - ' + typeLabel;
-            }
-            break;
-          } catch (e) {
-            continue;
-          }
-        }
-      }
-    }
+    let title = await resolveYouTubeFeedTitle(feedUrl, parsed, proxyList) || parsed.title;
     const f = await Storage.getFeeds().then((list) => list.find((x) => x.id === feedId));
     if (f) {
       f.title = title;
@@ -251,9 +289,20 @@
     await renderAll();
   }
 
+  function titleFromUrl(url) {
+    try {
+      const u = new URL(url.startsWith('http') ? url : 'https://' + url);
+      const host = u.hostname.replace(/^www\./, '');
+      if (host.endsWith('.substack.com')) return host.slice(0, -'.substack.com'.length);
+      return host;
+    } catch {
+      return 'Loading…';
+    }
+  }
+
   /** Add a feed when we already have the feed URL. Adds immediately, fetches in background. */
-  async function addFeedByUrl(feedUrl) {
-    const feed = { url: feedUrl, title: 'Loading…', order: feeds.length, lastUpdate: Date.now() };
+  async function addFeedByUrl(feedUrl, title) {
+    const feed = { url: feedUrl, title: title || titleFromUrl(feedUrl) || 'Loading…', order: feeds.length, lastUpdate: Date.now() };
     const saved = await Storage.addFeed(feed);
     await loadFeeds();
     await renderAll();
@@ -267,7 +316,7 @@
     if (!url) return false;
     if (!url.startsWith('http')) url = 'https://' + url;
 
-    const feed = { url, title: 'Loading…', order: feeds.length, lastUpdate: Date.now() };
+    const feed = { url, title: titleFromUrl(url), order: feeds.length, lastUpdate: Date.now() };
     const saved = await Storage.addFeed(feed);
     await loadFeeds();
     await renderAll();
@@ -318,13 +367,15 @@
       const hash = (window.location.hash || '#all').slice(1);
       const viewId = ['all', 'feeds', 'settings', 'about'].includes(hash) ? hash : 'all';
       UI.showView(viewId);
-      if (viewId === 'feeds') {
+      if (viewId === 'all') {
+        renderAll();
+      } else if (viewId === 'feeds') {
         document.getElementById('add-feed-form').hidden = true;
         document.getElementById('empty-feeds').hidden = feeds.length > 0;
       }
     });
 
-    document.querySelectorAll('.nav-item').forEach((n) => {
+    document.querySelectorAll('.header-nav-link[data-view]').forEach((n) => {
       n.addEventListener('click', (e) => {
         e.preventDefault();
         const view = n.getAttribute('data-view');
@@ -387,6 +438,7 @@
       input.value = '';
       document.getElementById('feed-url-hint').textContent = '';
       formActions.hidden = false;
+      form.scrollIntoView({ block: 'start', behavior: 'smooth' });
       input.focus();
     }
     btnAdd?.addEventListener('click', showAddFeedForm);
@@ -407,14 +459,22 @@
       const btn = e.target.closest('.youtube-choice-btn');
       if (!btn) return;
       const feedUrl = btn.dataset.feedUrl;
+      const feedTitle = btn.textContent;
       if (!feedUrl) return;
       const card = e.target.closest('.add-feed-pending-card');
       const id = card?.dataset?.pendingId;
-      const ok = await addFeedByUrl(feedUrl);
+      const ok = await addFeedByUrl(feedUrl, feedTitle);
       if (id) removePending(id);
       if (ok) {
+        pendingYouTubeList.forEach((p) => {
+          const el = document.getElementById(`pending-${p.id}`);
+          if (el) el.remove();
+        });
+        pendingYouTubeList.length = 0;
         input.value = '';
-        document.getElementById('feed-url-hint').textContent = 'Added. Add another or cancel.';
+        document.getElementById('feed-url-hint').textContent = '';
+        form.hidden = true;
+        if (feeds.length === 0) document.getElementById('empty-feeds').hidden = false;
       }
     });
 
@@ -488,10 +548,13 @@
         try {
           const u = new URL(url);
           const feedUrl = u.origin.replace(/\/$/, '') + '/feed';
-          const ok = await addFeedByUrl(feedUrl);
+          const subName = u.hostname.replace(/^www\./, '').replace(/\.substack\.com$/, '') || u.hostname;
+          const ok = await addFeedByUrl(feedUrl, subName);
           if (ok) {
             input.value = '';
-            hint.textContent = 'Added. Add another or cancel.';
+            hint.textContent = '';
+            form.hidden = true;
+            if (feeds.length === 0) document.getElementById('empty-feeds').hidden = false;
           }
         } catch (e) {
           hint.textContent = 'Invalid URL.';
@@ -502,7 +565,9 @@
       const ok = await addFeed(input.value);
       if (ok) {
         input.value = '';
-        hint.textContent = 'Added. Add another or cancel.';
+        hint.textContent = '';
+        form.hidden = true;
+        if (feeds.length === 0) document.getElementById('empty-feeds').hidden = false;
       }
     });
 
@@ -578,6 +643,7 @@
     document.getElementById('setting-refresh').value = String(s.refreshInterval);
     document.getElementById('setting-posts-per-page').value = String(s.postsPerPage ?? 15);
     document.getElementById('setting-font-size').value = String(s.fontSize);
+    document.getElementById('setting-font-family').value = s.fontFamily || 'times';
     document.getElementById('setting-proxy').value = s.proxy;
     document.getElementById('setting-feed-order').value = s.feedOrder || 'alphabetical';
 
@@ -601,6 +667,11 @@
       Storage.saveSettings(s);
       UI.setFontSize(s.fontSize);
     });
+    document.getElementById('setting-font-family')?.addEventListener('change', (e) => {
+      s.fontFamily = e.target.value;
+      Storage.saveSettings(s);
+      UI.setFontFamily(s.fontFamily);
+    });
     document.getElementById('setting-proxy')?.addEventListener('change', (e) => {
       s.proxy = e.target.value;
       Storage.saveSettings(s);
@@ -609,6 +680,11 @@
       s.feedOrder = e.target.value;
       Storage.saveSettings(s);
       renderAll();
+    });
+
+    document.getElementById('btn-restore-hidden')?.addEventListener('click', async () => {
+      await Storage.restoreHiddenArticles();
+      await renderAll();
     });
 
     document.getElementById('btn-export-opml')?.addEventListener('click', () => {
@@ -646,13 +722,18 @@
       const settings = Storage.getSettings();
       let added = 0;
       const failedUrls = [];
+      const proxyList = getProxyList();
       for (const f of imported) {
         try {
           let feedUrl = f.url;
           const normalized = await FeedParser.normalizeInputToFeedUrl(f.url, settings.proxy);
           if (normalized) feedUrl = normalized;
           const parsed = await FeedParser.fetchAndParse(feedUrl, settings.proxy);
-          const title = (f.title && f.title.trim()) ? f.title.trim() : (parsed.title || '');
+          let title = (f.title && f.title.trim()) ? f.title.trim() : (parsed.title || '');
+          const generic = ['Videos', 'Shorts', 'Live', 'All'];
+          if (feedUrl.includes('youtube.com/feeds/videos.xml') && generic.some((g) => title === g || title.startsWith(g))) {
+            title = await resolveYouTubeFeedTitle(feedUrl, parsed, proxyList) || title;
+          }
           const feed = { url: feedUrl, title, order: feeds.length, lastUpdate: Date.now() };
           const saved = await Storage.addFeed(feed);
           await Storage.upsertArticles(saved.id, parsed.items);
@@ -683,8 +764,31 @@
     });
   }
 
-  function wireInstallPrompt() {
+  function wireShareAndInstall() {
+    const shareBtn = document.getElementById('btn-share-main');
+    const installBtn = document.getElementById('btn-install');
     let deferredPrompt;
+
+    async function doShare() {
+      const url = window.location.href;
+      const title = 'JustRSS';
+      const text = 'A lightweight RSS reader that runs entirely in your browser. No ads, no algorithms, no logins. Your feed, your control.';
+      try {
+        if (navigator.share) {
+          await navigator.share({ title, text, url });
+          showToast('Shared');
+        } else {
+          await navigator.clipboard.writeText(url);
+          showToast('Link copied');
+        }
+      } catch (e) {
+        if (e.name !== 'AbortError') {
+          await navigator.clipboard.writeText(url);
+          showToast('Link copied');
+        }
+      }
+    }
+
     function doInstall() {
       if (deferredPrompt) {
         deferredPrompt.prompt();
@@ -692,16 +796,18 @@
           if (outcome === 'accepted') document.getElementById('install-prompt').hidden = true;
         });
       } else {
-        window.location.hash = 'about';
+        doShare();
       }
     }
+
+    shareBtn?.addEventListener('click', doShare);
+
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       deferredPrompt = e;
       document.getElementById('install-prompt').hidden = false;
     });
-    document.getElementById('btn-install')?.addEventListener('click', doInstall);
-    document.getElementById('btn-install-main')?.addEventListener('click', doInstall);
+    installBtn?.addEventListener('click', doInstall);
   }
 
   function wirePullToRefresh() {
@@ -713,7 +819,8 @@
     const limit = () => Storage.getSettings().postsPerPage || 15;
 
     document.getElementById('btn-load-more-all')?.addEventListener('click', async () => {
-      const next = await Storage.getArticles({ limit: limit(), offset: allArticles.length });
+      const excludeMuted = feeds.filter((f) => f.muted).map((f) => f.id);
+      const next = await Storage.getArticles({ limit: limit(), offset: allArticles.length, excludeFeedIds: excludeMuted });
       allArticles = allArticles.concat(next);
       UI.renderArticleList('article-list', allArticles, feedMap, { emptyId: 'empty-state' });
       document.getElementById('empty-state').hidden = allArticles.length > 0;
@@ -741,7 +848,7 @@
     wireLoadMore();
     wireArticleReader();
     wireSettings();
-    wireInstallPrompt();
+    wireShareAndInstall();
     wirePullToRefresh();
 
     const hash = (window.location.hash || '#all').slice(1);

@@ -113,7 +113,12 @@ function parseAtom(doc) {
     const linkEntry = entry.querySelector('link[rel="alternate"], link[type="text/html"]') || entry.querySelector('link');
     const itemLink = linkEntry?.getAttribute('href')?.trim() || '';
     const contentEl = entry.querySelector('content') || entry.querySelector('summary');
-    const content = contentEl?.textContent?.trim() || (contentEl?.innerHTML?.trim()) || '';
+    let content = contentEl?.textContent?.trim() || (contentEl?.innerHTML?.trim()) || '';
+    const mediaNs = 'http://search.yahoo.com/mrss/';
+    const mediaDesc = entry.getElementsByTagNameNS(mediaNs, 'description')[0];
+    if (!content && mediaDesc) content = mediaDesc.textContent?.trim() || '';
+    const mediaThumb = entry.getElementsByTagNameNS(mediaNs, 'thumbnail')[0];
+    const thumbUrl = mediaThumb?.getAttribute('url') || '';
     const updated = entry.querySelector('updated') || entry.querySelector('published');
     const published = updated ? new Date(updated.textContent).getTime() : Date.now();
     const authorEl = entry.querySelector('author name');
@@ -135,7 +140,7 @@ function parseAtom(doc) {
       content,
       published: Number.isNaN(published) ? Date.now() : published,
       author,
-      image: '',
+      image: thumbUrl || '',
       durationSeconds: durationSeconds || undefined,
     });
   });
@@ -479,6 +484,8 @@ async function fetchAndParse(feedUrl, proxyBase) {
 window.FeedParser = {
   fetchFeed,
   fetchAndParse,
+  parseXML,
+  parseRSS2JSON,
   discoverFeedUrl,
   normalizeInputToFeedUrl,
   resolveYouTubeChannelId,

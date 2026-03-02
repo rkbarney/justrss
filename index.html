@@ -2,10 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover">
   <meta name="theme-color" content="#0d0d0d">
   <meta name="description" content="RSS Reader - Your feed, your control. Subscribe to blogs and read without algorithms.">
   <title>JustRSS</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8F%B4%E2%80%8D%E2%98%A0%EF%B8%8F%3C/text%3E%3C/svg%3E">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8F%B4%E2%80%8D%E2%98%A0%EF%B8%8F%3C/text%3E%3C/svg%3E">
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="css/style.css">
 </head>
@@ -13,15 +15,21 @@
   <div id="app">
     <!-- Header -->
     <header class="app-header">
-      <div class="app-header-left">
-        <button type="button" id="btn-install-main" class="icon-btn btn-install-icon" aria-label="Install as an app" hidden></button>
-        <button type="button" id="btn-back" class="icon-btn" aria-label="Back" hidden></button>
+      <div class="app-header-main">
+        <a href="#all" class="app-title" id="view-title" data-view="all">JustRSS</a>
+        <nav class="app-header-nav" aria-label="Main">
+          <a href="#feeds" class="header-nav-link" data-view="feeds">Feeds</a>
+          <a href="#settings" class="header-nav-link" data-view="settings">Settings</a>
+          <a href="#about" class="header-nav-link" data-view="about">About</a>
+          <button type="button" id="btn-share-main" class="header-nav-link" aria-label="Share or add to home screen">Share</button>
+        </nav>
       </div>
-      <h1 class="app-title" id="view-title">JustRSS</h1>
-      <div class="app-header-actions">
-        <button type="button" id="btn-refresh" class="icon-btn" aria-label="Refresh feeds"></button>
-      </div>
+      <button type="button" id="btn-back" class="icon-btn" aria-label="Back" hidden></button>
+      <button type="button" id="btn-refresh" class="icon-btn" aria-label="Refresh feeds"></button>
     </header>
+
+    <div id="loading-articles" class="loading loading-fixed" hidden aria-live="polite">Loading…</div>
+    <div id="toast" class="toast" hidden aria-live="polite"></div>
 
     <!-- Main content areas -->
     <main id="main" class="main">
@@ -38,22 +46,15 @@
           <p class="empty-title">No feeds yet</p>
           <a href="#feeds" class="btn-primary">Add a feed</a>
         </div>
-        <div id="loading-articles" class="loading" hidden>Loading…</div>
       </section>
 
       <!-- Feeds list -->
       <section id="view-feeds" class="view">
-        <div class="feeds-toolbar">
-          <button type="button" id="btn-add-feed-top" class="btn-primary">+ Add feed</button>
-        </div>
-        <div id="feed-list" class="feed-list" role="list"></div>
-        <div id="empty-feeds" class="empty-state" hidden>
-          <p class="empty-philosophy">Browsing should feel intentional, not addictive.</p>
-          <p class="empty-text">This reader is built around that idea: your feeds, your attention. No engagement tricks, no lock-in.</p>
-          <p class="empty-title">No feeds yet</p>
-          <button type="button" id="btn-add-feed" class="btn-primary">Add a feed</button>
-        </div>
-        <div id="add-feed-form" class="add-feed-form" hidden>
+        <div class="feeds-add-sticky">
+          <div class="feeds-toolbar">
+            <button type="button" id="btn-add-feed-top" class="btn-primary">+ Add feed</button>
+          </div>
+          <div id="add-feed-form" class="add-feed-form" hidden>
           <label for="feed-url">RSS feed or website URL</label>
           <input type="url" id="feed-url" placeholder="e.g. blog.substack.com or youtube.com/@channel" autocomplete="url">
           <p class="hint hint-sources">Substack and YouTube: paste the blog or channel URL (we’ll find the feed). Any RSS/Atom URL works too.</p>
@@ -63,6 +64,14 @@
             <button type="button" id="btn-cancel-feed">Cancel</button>
             <button type="button" id="btn-save-feed" class="btn-primary">Add feed</button>
           </div>
+        </div>
+        </div>
+        <div id="feed-list" class="feed-list" role="list"></div>
+        <div id="empty-feeds" class="empty-state" hidden>
+          <p class="empty-philosophy">Browsing should feel intentional, not addictive.</p>
+          <p class="empty-text">This reader is built around that idea: your feeds, your attention. No engagement tricks, no lock-in.</p>
+          <p class="empty-title">No feeds yet</p>
+          <button type="button" id="btn-add-feed" class="btn-primary">Add a feed</button>
         </div>
       </section>
 
@@ -105,6 +114,14 @@
             </select>
           </div>
           <div class="setting-row">
+            <span>Font</span>
+            <select id="setting-font-family" aria-label="Font">
+              <option value="times">Times</option>
+              <option value="arial">Arial</option>
+              <option value="courier">Courier</option>
+            </select>
+          </div>
+          <div class="setting-row">
             <span>Feed proxy (CORS)</span>
             <select id="setting-proxy" aria-label="CORS proxy">
               <option value="https://api.allorigins.win/raw?url=">AllOrigins</option>
@@ -126,6 +143,7 @@
             <p id="import-status" class="hint" aria-live="polite"></p>
             <!-- accept broadened for iOS: Downloads often gray out when type doesn't match -->
 <input type="file" id="input-opml" accept=".opml,.xml,.txt,application/xml,text/xml,text/plain,application/opml+xml,*/*" hidden>
+            <button type="button" id="btn-restore-hidden" class="btn-secondary">Restore hidden articles</button>
             <button type="button" id="btn-clear-data" class="btn-danger">Clear all data</button>
           </div>
         </div>
@@ -143,7 +161,21 @@
             <p id="install-manual-hint" class="hint install-app-manual">On iPhone/iPad: tap the Share button, then “Add to Home Screen”. On Android: open the browser menu (⋮) and choose “Add to Home screen” or “Install app”.</p>
           </div>
           <h2 class="about-title">About</h2>
-          <p class="about-text">This is an intentionally lightweight RSS reader: it runs entirely in your browser with no dedicated servers, so there’s no lock-in, no server costs, and it’s just a static site you can clone and run yourself. The goal is simple—make browsing intentional rather than addictive. No logins, no ads, no algorithmic feeds; your data stays on your device.</p>
+          <p class="about-text">JustRSS is a simple browser-only RSS reader I built because I couldn't find a way to see the stuff I like online without all the stuff I don't.</p>
+          <p class="about-text">It's a chronological feed of whatever you subscribe to—no pictures, videos, ads, algorithms, or engagement traps. The whole thing runs in your browser as a static site. No logins, no servers, no data about you stored or sold anywhere.</p>
+          <p class="about-text">It supports any blog, news site, or RSS URL. For YouTube, paste a channel URL; for Substack, paste the publication URL. (It doesn't work for platforms that have disabled RSS to trap users—X, Meta, TikTok, etc.—which is another reason to leave them.)</p>
+          <p class="about-text">I built it mostly for YouTube and Substack since both favor algorithmic feeds and short-form content.</p>
+
+          <h3 class="about-title">Why this exists</h3>
+          <p class="about-text">Every other RSS reader I tried was either paid, had ads, or had attention-hacking "features" that it felt nearly identical to what I was trying to escape. JustRSS is the opposite: no account, no sync, no algorithm, no feed recommendations.</p>
+
+          <h3 class="about-title">Why RSS?</h3>
+          <p class="about-text">RSS is an open format designed before corporate greed enshittified the internet. There's no lock-in here. You can import and export your subscriptions in standard formats. You can always leave and take everything you love with you—unlike those other sites we all need to leave.</p>
+
+          <h3 class="about-title">Why we need to leave</h3>
+          <p class="about-text">This entire app was vibe-coded in a day. We don't have to stay on the internet that sucks. We can build a better internet. It's easier than ever. All we have to do is leave. Start posting on platforms that allow RSS feeds and other open formats. Follow creators, friends and family. Start your own blog.</p>
+
+          <p class="about-text">Still working out bugs. Would love feedback if you want to kick the tires.</p>
           <p class="about-text"><a href="https://github.com/rkbarney/justrss" target="_blank" rel="noopener noreferrer">Source on GitHub</a> — clone it and make your own. To report a bug or suggest a change, <a href="https://github.com/rkbarney/justrss/issues" target="_blank" rel="noopener noreferrer">open an issue</a> or <a href="https://github.com/rkbarney/justrss/pulls" target="_blank" rel="noopener noreferrer">submit a pull request</a>.</p>
         </div>
       </section>
@@ -165,22 +197,6 @@
         </article>
       </section>
     </main>
-
-    <!-- Bottom nav -->
-    <nav class="bottom-nav" aria-label="Main">
-      <a href="#all" class="nav-item nav-active" data-view="all" aria-current="page">
-        <span class="nav-label">All</span>
-      </a>
-      <a href="#feeds" class="nav-item" data-view="feeds">
-        <span class="nav-label">Feeds</span>
-      </a>
-      <a href="#settings" class="nav-item" data-view="settings">
-        <span class="nav-label">Settings</span>
-      </a>
-      <a href="#about" class="nav-item" data-view="about">
-        <span class="nav-label">About</span>
-      </a>
-    </nav>
   </div>
 
   <script src="js/storage.js"></script>

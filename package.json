@@ -1,0 +1,14 @@
+{
+  "name": "justrss",
+  "version": "1.0.0",
+  "description": "A lightweight RSS reader PWA",
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/",
+    "generate-icons": "node scripts/generate-icons.js"
+  },
+  "devDependencies": {
+    "jsdom": "^25.0.0",
+    "sharp": "^0.34.5"
+  }
+}
