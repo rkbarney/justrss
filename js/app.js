@@ -631,7 +631,7 @@
     window.addEventListener('hashchange', () => {
       if (beforeArticleView || restoringView || navigatingToFeed) return;
       const hash = (window.location.hash || '#all').slice(1);
-      const viewId = ['all', 'feeds', 'settings', 'about', 'help'].includes(hash) ? hash : 'all';
+      const viewId = ['all', 'feeds', 'settings', 'help'].includes(hash) ? hash : 'all';
       UI.showView(viewId);
       if (viewId === 'all') {
         currentFeedId = null;

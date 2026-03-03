@@ -23,8 +23,7 @@
         <nav class="app-header-nav" aria-label="Main">
           <a href="#feeds" class="header-nav-link" data-view="feeds">Feeds</a>
           <a href="#settings" class="header-nav-link" data-view="settings">Settings</a>
-          <a href="#help" class="header-nav-link" data-view="help">Help</a>
-          <a href="#about" class="header-nav-link" data-view="about">About</a>
+          <a href="#help" class="header-nav-link" data-view="help">FAQ</a>
           <button type="button" id="btn-share-main" class="header-nav-link" aria-label="Share or add to home screen">Share</button>
         </nav>
       </div>
@@ -142,37 +141,6 @@
         </div>
       </section>
 
-      <!-- About -->
-      <section id="view-about" class="view">
-        <div class="about-content">
-          <div class="install-app-card">
-            <h3 class="install-app-title">Install as an app</h3>
-            <p class="install-app-text">Add JustRSS to your phone or tablet for quick access and offline reading.</p>
-            <div class="install-prompt-inner" id="install-prompt" hidden>
-              <button type="button" id="btn-install" class="btn-primary">Install as an app</button>
-            </div>
-            <p id="install-manual-hint" class="hint install-app-manual">On iPhone/iPad: tap the Share button, then “Add to Home Screen”. On Android: open the browser menu (⋮) and choose “Add to Home screen” or “Install app”.</p>
-          </div>
-          <h2 class="about-title">About</h2>
-          <p class="about-text">JustRSS is a simple browser-only RSS reader I built because I couldn't find a way to see the stuff I like online without all the stuff I don't.</p>
-          <p class="about-text">It's a chronological feed of whatever you subscribe to—no pictures, videos, ads, algorithms, or engagement traps. The whole thing runs in your browser as a static site. No logins, no servers, no data about you stored or sold anywhere.</p>
-          <p class="about-text">It supports any blog, news site, or RSS URL. For YouTube, paste a channel URL; for Substack, paste the publication URL. (It doesn't work for platforms that have disabled RSS to trap users—X, Meta, TikTok, etc.—which is another reason to leave them.)</p>
-          <p class="about-text">I built it mostly for YouTube and Substack since both favor algorithmic feeds and short-form content.</p>
-
-          <h3 class="about-title">Why this exists</h3>
-          <p class="about-text">Every other RSS reader I tried was either paid, had ads, or had attention-hacking "features" that it felt nearly identical to what I was trying to escape. JustRSS is the opposite: no account, no sync, no algorithm, no feed recommendations.</p>
-
-          <h3 class="about-title">Why RSS?</h3>
-          <p class="about-text">RSS is an open format designed before corporate greed enshittified the internet. There's no lock-in here. You can import and export your subscriptions in standard formats. You can always leave and take everything you love with you—unlike those other sites we all need to leave.</p>
-
-          <h3 class="about-title">Why we need to leave</h3>
-          <p class="about-text">This entire app was vibe-coded in a day. We don't have to stay on the internet that sucks. We can build a better internet. It's easier than ever. All we have to do is leave. Start posting on platforms that allow RSS feeds and other open formats. Follow creators, friends and family. Start your own blog.</p>
-
-          <p class="about-text">Still working out bugs. Would love feedback if you want to kick the tires.</p>
-          <p class="about-text"><a href="https://github.com/rkbarney/justrss" target="_blank" rel="noopener noreferrer">Source on GitHub</a> — clone it and make your own. To report a bug or suggest a change, <a href="https://github.com/rkbarney/justrss/issues" target="_blank" rel="noopener noreferrer">open an issue</a> or <a href="https://github.com/rkbarney/justrss/pulls" target="_blank" rel="noopener noreferrer">submit a pull request</a>.</p>
-        </div>
-      </section>
-
       <!-- Article reader -->
       <section id="view-article" class="view view-article">
         <article id="article-content" class="article-content">
@@ -190,19 +158,48 @@
         </article>
       </section>
 
-      <!-- Help -->
+      <!-- FAQ (About + Help) -->
       <section id="view-help" class="view">
         <div class="about-content">
-          <h2>What is RSS?</h2>
-          <p>RSS is how the web was meant to work. When a website publishes something new, their RSS feed updates automatically. You subscribe once, and new content comes to you — no algorithm, no ads, no one deciding what you see.</p>
-          <h2>How do I find an RSS feed?</h2>
+          <div class="install-app-card">
+            <h3 class="install-app-title">How do I install JustRSS as an app?</h3>
+            <p class="install-app-text">Add JustRSS to your phone or tablet for quick access and offline reading.</p>
+            <div class="install-prompt-inner" id="install-prompt" hidden>
+              <button type="button" id="btn-install" class="btn-primary">Install as an app</button>
+            </div>
+            <p id="install-manual-hint" class="hint install-app-manual">On iPhone/iPad: tap the Share button, then “Add to Home Screen”. On Android: open the browser menu (⋮) and choose “Add to Home screen” or “Install app”.</p>
+          </div>
+
+          <h2 class="about-title">What is JustRSS?</h2>
+          <p class="about-text">JustRSS is a simple browser-only RSS reader I built because I couldn't find a way to see the stuff I like online without all the stuff I don't.</p>
+          <p class="about-text">It's a chronological feed of whatever you subscribe to—no pictures, videos, ads, algorithms, or engagement traps. The whole thing runs in your browser as a static site. No logins, no servers, no data about you stored or sold anywhere.</p>
+          <p class="about-text">It supports any blog, news site, or RSS URL. For YouTube, paste a channel URL; for Substack, paste the publication URL. (It doesn't work for platforms that have disabled RSS to trap users—X, Meta, TikTok, etc.—which is another reason to leave them.)</p>
+
+          <h2 class="about-title">Why did you build this?</h2>
+          <p class="about-text">Every other RSS reader I tried was either paid, had ads, or had attention-hacking “features” that made it feel nearly identical to what I was trying to escape. JustRSS is the opposite: no account, no sync, no algorithm, no feed recommendations.</p>
+
+          <h2 class="about-title">Why RSS?</h2>
+          <p class="about-text">RSS is an open format designed before corporate greed enshittified the internet. There's no lock-in here. You can import and export your subscriptions in standard formats. You can always leave and take everything you love with you—unlike those other sites we all need to leave.</p>
+
+          <h2 class="about-title">Why should we leave the big algorithmic feeds?</h2>
+          <p class="about-text">We don't have to stay on the internet that sucks. We can build a better internet. It's easier than ever. All we have to do is leave. Start posting on platforms that allow RSS feeds and other open formats. Follow creators, friends and family. Start your own blog.</p>
+
+          <h2 class="about-title">What is RSS?</h2>
+          <p class="about-text">RSS is how the web was meant to work. When a website publishes something new, their RSS feed updates automatically. You subscribe once, and new content comes to you — no algorithm, no ads, no one deciding what you see.</p>
+
+          <h2 class="about-title">How do I find an RSS feed?</h2>
           <ul>
-            <li><strong>News sites and blogs:</strong> Most have a feed at /feed or /rss — try pasting the website URL into JustRSS and we'll find it automatically.</li>
+            <li><strong>News sites and blogs:</strong> Most have a feed at <code>/feed</code> or <code>/rss</code> — try pasting the website URL into JustRSS and we'll find it automatically.</li>
             <li><strong>Substack:</strong> Paste the newsletter URL — we'll find the feed.</li>
             <li><strong>YouTube:</strong> Go to the channel page, copy the URL, paste it in the YouTube tab.</li>
             <li><strong>Podcasts:</strong> Use the Podcasts tab to search by name.</li>
             <li><strong>Anything else:</strong> Try googling <em>[website name] RSS feed</em>. Or paste the URL and we'll try to detect it.</li>
           </ul>
+
+          <h2 class="about-title">Where can I report bugs or see the code?</h2>
+          <p class="about-text">Still working out bugs. Would love feedback if you want to kick the tires.</p>
+          <p class="about-text"><a href="https://github.com/rkbarney/justrss" target="_blank" rel="noopener noreferrer">Source on GitHub</a> — clone it and make your own. To report a bug or suggest a change, <a href="https://github.com/rkbarney/justrss/issues" target="_blank" rel="noopener noreferrer">open an issue</a> or <a href="https://github.com/rkbarney/justrss/pulls" target="_blank" rel="noopener noreferrer">submit a pull request</a>.</p>
+
           <a href="#feeds" class="btn-primary">Back to Feeds</a>
         </div>
       </section>
