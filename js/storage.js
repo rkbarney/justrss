@@ -162,6 +162,7 @@ async function upsertArticles(feedId, items) {
       feedId,
       title: item.title,
       link: item.link,
+      guid: item.guid,
       content: item.content,
       published: item.published || 0,
       author: item.author,

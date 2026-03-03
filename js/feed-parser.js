@@ -41,9 +41,11 @@ function parseRSS2JSON(data) {
       const isPodcast = durationSeconds > 0 || (item.enclosure?.type || '').startsWith('audio/');
       const enc = item.enclosure;
       const enclosureUrl = (enc?.url || enc?.link || '').trim();
+      const guid = (item.guid || '').trim();
       return {
         title: item.title || '(No title)',
-        link: item.link || item.url || '',
+        link: item.link || item.url || guid || '',
+        guid: (guid && guid.startsWith('http')) ? guid : undefined,
         content: item.content || item.description || '',
         published: item.pubDate ? new Date(item.pubDate).getTime() : Date.now(),
         author: item.author || '',
@@ -109,6 +111,7 @@ function parseRSS(doc) {
     items.push({
       title: itemTitle,
       link: itemLink || guid,
+      guid: (guid && guid.startsWith('http')) ? guid : undefined,
       content,
       published: Number.isNaN(published) ? Date.now() : published,
       author,
@@ -160,9 +163,12 @@ function parseAtom(doc) {
     }
 
     const isPodcast = durationSeconds > 0 || (enclosureEl?.getAttribute('type') || '').startsWith('audio/');
+    const idEl = entry.querySelector('id');
+    const guid = (idEl?.textContent?.trim() || '').startsWith('http') ? idEl.textContent.trim() : undefined;
     items.push({
       title: itemTitle,
       link: itemLink,
+      guid,
       content,
       published: Number.isNaN(published) ? Date.now() : published,
       author,

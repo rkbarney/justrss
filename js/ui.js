@@ -99,18 +99,32 @@ const UI = {
     return div.innerHTML;
   },
 
-  /** URL for "Open in browser". For podcasts, prefer Apple Podcasts episode URL, then podcast page, over direct audio. */
+  /** URL for "Open in browser". For podcast feeds (added via Podcasts tab): guid → enclosure → link. For others: existing behavior. */
   getArticleDisplayUrl(article, feed) {
     const articleLink = (article?.link || '').trim();
     const enclosureUrl = (article?.enclosureUrl || '').trim();
+    const guid = (article?.guid || '').trim();
     const feedLink = (feed?.link || '').trim();
     const appleUrl = (feed?.appleUrl || '').trim();
     const feedUrl = (feed?.url || '').trim();
     const appleEpisodeUrl = (article?.appleEpisodeUrl || '').trim();
+    const isPodcastFeed = feed?.type === 'podcast';
     const isPodcast = article?.durationSeconds != null && article.durationSeconds > 0;
     const mediaExt = /\.(mp3|m4a|mp4|wav|ogg|aac|mpa|webm|opus)(\?|$)/i;
     const articleLinkIsMedia = articleLink && mediaExt.test(articleLink);
     const isApplePodcastsUrl = (url) => url && /podcasts\.apple\.com/i.test(url);
+
+    if (isPodcastFeed) {
+      if (appleEpisodeUrl) return appleEpisodeUrl;
+      if (guid) return guid;
+      if (enclosureUrl) return enclosureUrl;
+      if (articleLink && !articleLinkIsMedia && isApplePodcastsUrl(articleLink)) return articleLink;
+      if (appleUrl) return appleUrl;
+      if (articleLink) return articleLink;
+      if (feedLink) return feedLink;
+      return feedUrl || '';
+    }
+
     if (isPodcast && appleEpisodeUrl) return appleEpisodeUrl;
     if (isPodcast && articleLink && !articleLinkIsMedia && isApplePodcastsUrl(articleLink)) return articleLink;
     if (isPodcast && appleUrl) return appleUrl;

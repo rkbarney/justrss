@@ -552,7 +552,10 @@
   /** Add a feed when we already have the feed URL. Adds immediately, fetches in background. appleUrl = Apple Podcasts link (for podcasts from iTunes search). */
   async function addFeedByUrl(feedUrl, title, appleUrl = '') {
     const feed = { url: feedUrl, title: title || titleFromUrl(feedUrl) || 'Loading…', order: feeds.length, lastUpdate: Date.now() };
-    if (appleUrl) feed.appleUrl = appleUrl;
+    if (appleUrl) {
+      feed.appleUrl = appleUrl;
+      feed.type = 'podcast';
+    }
     const saved = await Storage.addFeed(feed);
     await loadFeeds();
     await renderAll();
