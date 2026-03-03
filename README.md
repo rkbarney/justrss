@@ -1,5 +1,7 @@
 # RSS Reader PWA
 
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+
 A mobile-first RSS reader that runs **entirely in your browser**. No backend, no account, no algorithm. You own your feed.
 
 Central idea: **browsing should be intentional, not addictive.** Plain design on purpose; no engagement tricks.
@@ -145,4 +147,9 @@ The repo includes minimal placeholder icons. For better “Add to Home Screen”
 
 ## License
 
-Use and modify as you like.
+JustRSS is licensed under the [GNU Affero General Public License v3.0](LICENSE).
+
+You're free to fork it, self-host it, and modify it. If you distribute a modified version, 
+you must also make your source code available under the same license.
+
+Please don't take this code, put it behind a paywall, and call it your own.
