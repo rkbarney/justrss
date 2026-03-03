@@ -167,6 +167,8 @@ async function upsertArticles(feedId, items) {
       author: item.author,
       image: item.image,
       durationSeconds: item.durationSeconds,
+      enclosureUrl: item.enclosureUrl,
+      appleEpisodeUrl: item.appleEpisodeUrl,
       read: existingIds.has(id) ? (existing.find((a) => a.id === id)?.read ?? false) : false,
       starred: existingIds.has(id) ? (existing.find((a) => a.id === id)?.starred ?? false) : false,
       hidden: existingIds.has(id) ? (existing.find((a) => a.id === id)?.hidden ?? false) : false,

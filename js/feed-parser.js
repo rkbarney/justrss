@@ -39,6 +39,8 @@ function parseRSS2JSON(data) {
         }
       }
       const isPodcast = durationSeconds > 0 || (item.enclosure?.type || '').startsWith('audio/');
+      const enc = item.enclosure;
+      const enclosureUrl = (enc?.url || enc?.link || '').trim();
       return {
         title: item.title || '(No title)',
         link: item.link || item.url || '',
@@ -48,6 +50,7 @@ function parseRSS2JSON(data) {
         image: item.thumbnail || item.enclosure?.link || '',
         durationSeconds: durationSeconds || undefined,
         isPodcast,
+        enclosureUrl: isPodcast && enclosureUrl ? enclosureUrl : undefined,
       };
     }),
   };
@@ -87,7 +90,8 @@ function parseRSS(doc) {
       || item.querySelector('author')?.textContent?.trim() || '';
     const enclosure = item.querySelector('enclosure');
     const enclosureType = enclosure?.getAttribute('type') || '';
-    const image = enclosureType.startsWith('image/') ? enclosure.getAttribute('url') : '';
+    const enclosureUrl = enclosure?.getAttribute('url') || '';
+    const image = enclosureType.startsWith('image/') ? enclosureUrl : '';
     const isAudio = enclosureType.startsWith('audio/');
     let durationSeconds = 0;
     const itunesNs = 'http://www.itunes.com/dtds/podcast-1.0.dtd';
@@ -111,6 +115,7 @@ function parseRSS(doc) {
       image: image || '',
       durationSeconds: durationSeconds || undefined,
       isPodcast: isAudio || (durationSeconds > 0),
+      enclosureUrl: isAudio ? enclosureUrl : undefined,
     });
   });
 
@@ -130,6 +135,8 @@ function parseAtom(doc) {
     const itemTitle = entry.querySelector('title')?.textContent?.trim() || '(No title)';
     const linkEntry = entry.querySelector('link[rel="alternate"], link[type="text/html"]') || entry.querySelector('link');
     const itemLink = linkEntry?.getAttribute('href')?.trim() || '';
+    const enclosureEl = entry.querySelector('link[rel="enclosure"]');
+    const enclosureUrl = enclosureEl?.getAttribute('href')?.trim() || '';
     const contentEl = entry.querySelector('content') || entry.querySelector('summary');
     let content = contentEl?.textContent?.trim() || (contentEl?.innerHTML?.trim()) || '';
     const mediaNs = 'http://search.yahoo.com/mrss/';
@@ -152,6 +159,7 @@ function parseAtom(doc) {
       }
     }
 
+    const isPodcast = durationSeconds > 0 || (enclosureEl?.getAttribute('type') || '').startsWith('audio/');
     items.push({
       title: itemTitle,
       link: itemLink,
@@ -160,6 +168,7 @@ function parseAtom(doc) {
       author,
       image: thumbUrl || '',
       durationSeconds: durationSeconds || undefined,
+      enclosureUrl: isPodcast && enclosureUrl ? enclosureUrl : undefined,
     });
   });
 
@@ -497,7 +506,26 @@ async function resolveYouTubeChannelIdParallel(inputUrl, proxyList) {
 }
 
 /**
- * Normalize known site URLs to their RSS/feed URL (Substack, YouTube).
+ * Resolve Apple Podcasts URL to RSS feed URL via iTunes Lookup API.
+ */
+async function resolveApplePodcastToFeedUrl(inputUrl) {
+  try {
+    const u = new URL(inputUrl.startsWith('http') ? inputUrl : 'https://' + inputUrl);
+    const match = u.pathname.match(/\/id(\d+)/);
+    if (!match) return null;
+    const id = match[1];
+    const res = await fetch(`https://itunes.apple.com/lookup?id=${id}&entity=podcast`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const p = data.results?.[0];
+    return (p?.feedUrl || '').trim() || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Normalize known site URLs to their RSS/feed URL (Substack, YouTube, Apple Podcasts).
  * For YouTube we return the "All" feed when normalizing (e.g. for import).
  */
 async function normalizeInputToFeedUrl(inputUrl, proxyBase) {
@@ -508,6 +536,13 @@ async function normalizeInputToFeedUrl(inputUrl, proxyBase) {
     return null;
   }
   const host = url.hostname.toLowerCase();
+
+  if (host === 'podcasts.apple.com' || host === 'embed.podcasts.apple.com') {
+    if (/\/id\d+/.test(url.pathname)) {
+      return resolveApplePodcastToFeedUrl(inputUrl);
+    }
+  }
+
   const isSubstack = host.endsWith('.substack.com') || host === 'substack.com' || host === 'www.substack.com';
 
   if (isSubstack) {
@@ -527,6 +562,56 @@ async function normalizeInputToFeedUrl(inputUrl, proxyBase) {
   }
 
   return null;
+}
+
+/**
+ * Fetch Apple Podcasts page and extract episode URLs. Returns map of slug -> full Apple episode URL.
+ * Uses JSON-LD workExample (AudioObject) when available; falls back to regex on HTML.
+ */
+async function discoverApplePodcastEpisodeUrls(appleUrl, proxyBase) {
+  const fullUrl = getProxyUrl(proxyBase, appleUrl);
+  const res = await fetch(fullUrl);
+  const html = await res.text();
+  const map = {};
+
+  // Prefer JSON-LD: workExample contains AudioObject with name + url
+  const ldRegex = /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+  let ldMatch;
+  while ((ldMatch = ldRegex.exec(html)) !== null) {
+    try {
+      const ld = JSON.parse(ldMatch[1]);
+      const items = ld?.workExample || (Array.isArray(ld) ? ld.flatMap((x) => x?.workExample || []) : []);
+      for (const item of items) {
+        if (item?.['@type'] === 'AudioObject' && item?.name && item?.url) {
+          const slug = slugifyTitle(item.name);
+          if (slug && /podcasts\.apple\.com.*\?i=\d+/.test(item.url)) {
+            map[slug] = item.url.replace(/&amp;/g, '&');
+          }
+        }
+      }
+    } catch (_) {}
+  }
+
+  // Fallback: regex for episode URLs in HTML
+  if (Object.keys(map).length === 0) {
+    const re = /https:\/\/podcasts\.apple\.com\/[^/]+\/podcast\/([^/]+)\/id\d+\?i=\d+/gi;
+    let match;
+    while ((match = re.exec(html)) !== null) {
+      const slug = match[1].toLowerCase().replace(/&#\d+;/g, '');
+      const url = match[0].replace(/&amp;/g, '&');
+      if (!map[slug]) map[slug] = url;
+    }
+  }
+
+  return map;
+}
+
+function slugifyTitle(title) {
+  return (title || '')
+    .toLowerCase()
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
 }
 
 /**
@@ -579,6 +664,8 @@ window.FeedParser = {
   parseXML,
   parseRSS2JSON,
   discoverFeedUrl,
+  discoverApplePodcastEpisodeUrls,
+  slugifyTitle,
   normalizeInputToFeedUrl,
   resolveYouTubeChannelId,
   resolveYouTubeChannelIdParallel,

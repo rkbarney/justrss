@@ -72,15 +72,17 @@
       for (const feed of feeds) {
         try {
           const parsed = await FeedParser.fetchAndParse(feed.url, proxy, { noCache });
-          await Storage.upsertArticles(feed.id, parsed.items);
           const updates = { ...feed };
           if (parsed.title && !feed.title) updates.title = parsed.title;
           if (parsed.link) updates.link = parsed.link;
+          let appleUrl = feed.appleUrl;
           const hasPodcastItems = parsed.items?.some((i) => i.isPodcast || (i.durationSeconds != null && i.durationSeconds > 0));
-          if (hasPodcastItems && !feed.appleUrl) {
-            const appleUrl = await lookupApplePodcastUrl(feed.title || parsed.title);
+          if (hasPodcastItems && !appleUrl) {
+            appleUrl = await lookupApplePodcastUrl(feed.title || parsed.title);
             if (appleUrl) updates.appleUrl = appleUrl;
           }
+          await enrichPodcastItemsWithAppleEpisodeUrls(parsed.items, appleUrl, proxy);
+          await Storage.upsertArticles(feed.id, parsed.items);
           updates.lastUpdate = Date.now();
           await Storage.updateFeed(updates);
         } catch (e) {
@@ -97,7 +99,7 @@
     showToast(noCache ? 'Force refreshed' : 'Refreshed');
   }
 
-  function showToast(message) {
+  function showToast(message, durationMs = 2000) {
     const toast = document.getElementById('toast');
     if (!toast) return;
     toast.textContent = message;
@@ -107,7 +109,7 @@
     showToast._tid = setTimeout(() => {
       toast.classList.remove('visible');
       setTimeout(() => { toast.hidden = true; }, 200);
-    }, 2000);
+    }, durationMs);
   }
 
   function scheduleRefresh() {
@@ -373,6 +375,40 @@
     }
   }
 
+  function isApplePodcastsUrl(url) {
+    try {
+      const u = new URL(url.startsWith('http') ? url : 'https://' + url);
+      const h = u.hostname.toLowerCase();
+      return (h === 'podcasts.apple.com' || h === 'embed.podcasts.apple.com') && /\/id\d+/.test(u.pathname);
+    } catch {
+      return false;
+    }
+  }
+
+  /** Resolve Apple Podcasts URL to RSS feed. Returns { feedUrl, title, appleUrl } or null. */
+  async function resolveApplePodcastUrl(url) {
+    try {
+      const u = new URL(url.startsWith('http') ? url : 'https://' + url);
+      const match = u.pathname.match(/\/id(\d+)/);
+      if (!match) return null;
+      const id = match[1];
+      const res = await fetch(`https://itunes.apple.com/lookup?id=${id}&entity=podcast`);
+      if (!res.ok) return null;
+      const data = await res.json();
+      const p = data.results?.[0];
+      if (!p?.feedUrl) return null;
+      const feedUrl = p.feedUrl.trim();
+      const appleUrl = (p.trackViewUrl || `https://podcasts.apple.com/podcast/id${id}`).trim();
+      return {
+        feedUrl,
+        title: (p.collectionName || p.trackName || '').trim(),
+        appleUrl,
+      };
+    } catch {
+      return null;
+    }
+  }
+
   function feedErrorHint(err) {
     const msg = err?.message || String(err);
     if (msg.includes('HTTP 404') || msg.includes('404')) return 'Feed not found (404).';
@@ -407,8 +443,8 @@
     return title;
   }
 
-  /** Fetch feed in background and update storage. Called after feed is added with "Loading…". */
-  async function fetchFeedInBackground(feedId, feedUrl) {
+  /** Fetch feed in background and update storage. Called after feed is added with "Loading…". appleUrl = fallback to discover feed from Apple Podcasts page when feedUrl 404s. */
+  async function fetchFeedInBackground(feedId, feedUrl, appleUrl = '') {
     const proxyList = getProxyList();
     let parsed = null;
     for (const proxy of proxyList) {
@@ -419,11 +455,30 @@
         continue;
       }
     }
+    if (!parsed && appleUrl) {
+      for (const proxy of proxyList) {
+        try {
+          const discovered = await FeedParser.discoverFeedUrl(appleUrl, proxy);
+          if (discovered && discovered !== feedUrl) {
+            const f = await Storage.getFeeds().then((list) => list.find((x) => x.id === feedId));
+            if (f) {
+              f.url = discovered;
+              await Storage.updateFeed(f);
+            }
+            parsed = await FeedParser.fetchAndParse(discovered, proxy);
+            feedUrl = discovered;
+            break;
+          }
+        } catch {
+          continue;
+        }
+      }
+    }
     if (!parsed) {
       const f = await Storage.getFeeds().then((list) => list.find((x) => x.id === feedId));
       if (f) {
-        f.title = 'Failed to load';
-        await Storage.updateFeed(f);
+        showToast(`Removed "${f.title || f.url}" — feed not found. Try pasting the RSS URL in the RSS tab.`, 6000);
+        await Storage.deleteFeed(feedId);
       }
       await loadFeeds();
       await renderAll();
@@ -431,16 +486,19 @@
     }
     let title = await resolveYouTubeFeedTitle(feedUrl, parsed, proxyList) || parsed.title;
     const f = await Storage.getFeeds().then((list) => list.find((x) => x.id === feedId));
+    let effectiveAppleUrl = f?.appleUrl || '';
     if (f) {
       f.title = title;
       if (parsed.link) f.link = parsed.link;
       const hasPodcastItems = parsed.items?.some((i) => i.isPodcast || (i.durationSeconds != null && i.durationSeconds > 0));
-      if (hasPodcastItems && !f.appleUrl) {
-        const appleUrl = await lookupApplePodcastUrl(f.title || title);
-        if (appleUrl) f.appleUrl = appleUrl;
+      if (hasPodcastItems && !effectiveAppleUrl) {
+        effectiveAppleUrl = await lookupApplePodcastUrl(f.title || title);
+        if (effectiveAppleUrl) f.appleUrl = effectiveAppleUrl;
       }
       await Storage.updateFeed(f);
     }
+    const proxy = getEffectiveProxy();
+    await enrichPodcastItemsWithAppleEpisodeUrls(parsed.items, effectiveAppleUrl, proxy);
     await Storage.upsertArticles(feedId, parsed.items);
     await loadFeeds();
     await renderAll();
@@ -454,6 +512,27 @@
       return host;
     } catch {
       return 'Loading…';
+    }
+  }
+
+  /** Enrich podcast items with Apple episode URLs by scraping the Apple Podcasts page. */
+  async function enrichPodcastItemsWithAppleEpisodeUrls(items, appleUrl, proxyBase) {
+    if (!appleUrl || !items?.length || typeof FeedParser.discoverApplePodcastEpisodeUrls !== 'function') return;
+    const hasPodcastItems = items.some((i) => i.isPodcast || (i.durationSeconds != null && i.durationSeconds > 0));
+    if (!hasPodcastItems) return;
+    try {
+      const episodeMap = await FeedParser.discoverApplePodcastEpisodeUrls(appleUrl, proxyBase);
+      if (!Object.keys(episodeMap).length) return;
+      for (const item of items) {
+        if (!item.isPodcast && (item.durationSeconds == null || item.durationSeconds <= 0)) continue;
+        const slug = FeedParser.slugifyTitle(item.title);
+        const url = episodeMap[slug] || Object.entries(episodeMap).find(([epSlug]) =>
+          slug === epSlug || slug.endsWith('-' + epSlug) || epSlug.endsWith('-' + slug)
+        )?.[1];
+        if (url) item.appleEpisodeUrl = url;
+      }
+    } catch (e) {
+      console.warn('Could not discover Apple episode URLs:', e);
     }
   }
 
@@ -477,7 +556,7 @@
     const saved = await Storage.addFeed(feed);
     await loadFeeds();
     await renderAll();
-    fetchFeedInBackground(saved.id, feedUrl);
+    fetchFeedInBackground(saved.id, feedUrl, appleUrl);
     return true;
   }
 
@@ -521,8 +600,8 @@
       }
       if (!looksLikeFeed && feedUrl === url) {
         if (f) {
-          f.title = 'Could not find feed';
-          await Storage.updateFeed(f);
+          showToast(`Removed "${f.title || f.url}" — could not find feed. Try pasting the RSS URL directly.`, 6000);
+          await Storage.deleteFeed(saved.id);
         }
         await loadFeeds();
         await renderAll();
@@ -717,6 +796,22 @@
           hintRss.textContent = 'Choose a feed above.';
         } else {
           hintRss.textContent = "Couldn't find a channel at that URL — try the channel page directly.";
+        }
+        return;
+      }
+
+      if (isApplePodcastsUrl(url)) {
+        hintRss.textContent = 'Looking up podcast…';
+        try {
+          const resolved = await resolveApplePodcastUrl(url);
+          if (resolved) {
+            const ok = await addFeedByUrl(resolved.feedUrl, resolved.title, resolved.appleUrl);
+            if (ok) closeAddFeedDialog();
+          } else {
+            hintRss.textContent = 'Could not find podcast feed. Try pasting the RSS URL directly.';
+          }
+        } catch {
+          hintRss.textContent = 'Could not look up podcast. Try pasting the RSS URL directly.';
         }
         return;
       }

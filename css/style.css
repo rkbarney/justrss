@@ -390,6 +390,9 @@ body[data-nav-position="bottom"] .toast {
   gap: 8px;
   overflow: hidden;
   touch-action: pan-y;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .feed-item-info {
