@@ -318,7 +318,8 @@
     info?.addEventListener('click', async (e) => {
       if (feedDialogJustShown) return;
       navigatingToFeed = true;
-      const articles = await Storage.getArticles(getArticleOptions({ feedId }));
+      // When viewing a specific feed, show its articles even if the feed is muted.
+      const articles = await Storage.getArticles(getArticleOptions({ feedId, excludeFeedIds: [] }));
       const feed = feedMap[feedId];
       currentFeedId = feedId;
       window.location.hash = 'all';
@@ -329,7 +330,7 @@
       const loadMoreWrap = document.getElementById('load-more-all-wrap');
       const loadMoreBtn = document.getElementById('btn-load-more-all');
       if (loadMoreWrap) loadMoreWrap.hidden = articles.length === 0;
-      const next = await Storage.getArticles(getArticleOptions({ feedId, limit: 1, offset: articles.length }));
+      const next = await Storage.getArticles(getArticleOptions({ feedId, excludeFeedIds: [], limit: 1, offset: articles.length }));
       if (loadMoreBtn) loadMoreBtn.hidden = next.length === 0;
       document.getElementById('article-list')?.querySelectorAll('.article-item').forEach((item) => {
         attachArticleItemListeners(item, articles, 'all');

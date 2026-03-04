@@ -11,7 +11,7 @@
 }
 
 /* Minimal: light */
-[data-style="minimal"][data-color-scheme="light"] {
+html[data-style="minimal"][data-color-scheme="light"] {
   --bg: #fff;
   --bg-elevated: #fff;
   --text: #000;
@@ -22,7 +22,7 @@
 }
 
 /* Minimal: dark */
-[data-style="minimal"][data-color-scheme="dark"] {
+html[data-style="minimal"][data-color-scheme="dark"] {
   --bg: #1a1a1a;
   --bg-elevated: #222;
   --text: #ddd;
@@ -33,7 +33,7 @@
 }
 
 /* Craigslist: light */
-[data-style="craigslist"][data-color-scheme="light"] {
+html[data-style="craigslist"][data-color-scheme="light"] {
   --bg: #f5f5f5;
   --bg-elevated: #fff;
   --text: #000;
@@ -44,7 +44,7 @@
 }
 
 /* Craigslist: dark */
-[data-style="craigslist"][data-color-scheme="dark"] {
+html[data-style="craigslist"][data-color-scheme="dark"] {
   --bg: #1a1a1a;
   --bg-elevated: #222;
   --text: #ddd;
