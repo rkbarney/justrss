@@ -68,9 +68,15 @@
   }
   UI.setViewTitle = setViewTitle;
 
+  /**
+   * Single refresh entry point. Refreshes the current view (one feed or all) and re-renders it.
+   * - opts.all: true = always refresh all feeds and show main list (e.g. Settings "Force refresh").
+   * - opts.noCache: true = bypass cache.
+   * Otherwise: if currentFeedId is set, refresh that feed and stay on it; else refresh all and show main list.
+   */
   async function refreshAllFeeds(opts = {}) {
-    const { noCache = false } = opts;
-    const settings = Storage.getSettings();
+    const { noCache = false, all: forceAll = false } = opts;
+    const singleFeedId = forceAll ? null : currentFeedId;
     const proxy = getEffectiveProxy();
     const loading = document.getElementById('loading-articles');
     const refreshBtn = document.getElementById('btn-refresh');
@@ -80,8 +86,9 @@
       if (loading) loading.hidden = true;
       if (refreshBtn) refreshBtn.hidden = false;
     }, 30000);
+    const toRefresh = singleFeedId ? feeds.filter((f) => f.id === singleFeedId) : feeds;
     try {
-      for (const feed of feeds) {
+      for (const feed of toRefresh) {
         try {
           const parsed = await FeedParser.fetchAndParse(feed.url, proxy, { noCache });
           const updates = { ...feed };
@@ -106,9 +113,43 @@
       if (loading) loading.hidden = true;
       if (refreshBtn) refreshBtn.hidden = false;
     }
-    await renderAll();
+    if (forceAll) {
+      currentFeedId = null;
+      await renderAll();
+    } else if (singleFeedId) {
+      await renderFeedView(singleFeedId);
+    } else {
+      await renderAll();
+    }
+    syncHashFromView();
     scheduleRefresh();
     showToast(noCache ? 'Force refreshed' : 'Refreshed');
+  }
+
+  /** Re-render the article list for a single feed (keeps you on that feed's page). */
+  async function renderFeedView(feedId) {
+    await loadFeeds();
+    const articles = await Storage.getArticles(getArticleOptions({ feedId, excludeFeedIds: [] }));
+    const feed = feedMap[feedId];
+    setViewTitle(feed?.title || 'Feed');
+    UI.renderArticleList('article-list', articles, feedMap, { emptyId: 'empty-state', feedsLength: feeds.length });
+    const loadMoreWrap = document.getElementById('load-more-all-wrap');
+    const loadMoreBtn = document.getElementById('btn-load-more-all');
+    if (loadMoreWrap) loadMoreWrap.hidden = articles.length === 0;
+    const next = await Storage.getArticles(getArticleOptions({ feedId, excludeFeedIds: [], limit: 1, offset: articles.length }));
+    if (loadMoreBtn) loadMoreBtn.hidden = next.length === 0;
+    document.getElementById('article-list')?.querySelectorAll('.article-item').forEach((item) => {
+      attachArticleItemListeners(item, articles, 'all');
+    });
+    syncHashFromView();
+  }
+
+  /** Keep URL hash in sync with current list view so browser refresh restores it. */
+  function syncHashFromView() {
+    const h = currentFeedId ? `all:${currentFeedId}` : 'all';
+    if ((window.location.hash || '#all').slice(1) !== h) {
+      window.location.replace(window.location.pathname + window.location.search + '#' + h);
+    }
   }
 
   function showToast(message, durationMs = 2000) {
@@ -129,7 +170,7 @@
     const s = Storage.getSettings();
     const mins = Number(s.refreshInterval) || 0;
     if (mins <= 0) return;
-    refreshTimeout = setTimeout(refreshAllFeeds, mins * 60 * 1000);
+    refreshTimeout = setTimeout(() => refreshAllFeeds(), mins * 60 * 1000);
   }
 
   function getArticleOptions(overrides = {}) {
@@ -166,6 +207,7 @@
     if (empty) empty.hidden = allArticles.length > 0;
 
     currentFeedId = null;
+    syncHashFromView();
     const loadMoreAllWrap = document.getElementById('load-more-all-wrap');
     if (loadMoreAllWrap) loadMoreAllWrap.hidden = allArticles.length === 0;
     const loadMoreBtn = document.getElementById('btn-load-more-all');
@@ -219,7 +261,7 @@
   function restoreView(viewId, feedId = null) {
     beforeArticleView = null;
     restoringView = true;
-    window.location.hash = viewId;
+    window.location.hash = viewId === 'all' && feedId ? `all:${feedId}` : viewId;
     UI.showView(viewId);
     if (viewId === 'all') {
       if (feedId) {
@@ -322,7 +364,7 @@
       const articles = await Storage.getArticles(getArticleOptions({ feedId, excludeFeedIds: [] }));
       const feed = feedMap[feedId];
       currentFeedId = feedId;
-      window.location.hash = 'all';
+      syncHashFromView();
       UI.saveScroll('all');
       UI.showView('all');
       setViewTitle(feed?.title || 'Feed');
@@ -576,7 +618,7 @@
     return true;
   }
 
-  /** Add feed from URL (blog or direct feed). Adds immediately, discovers + fetches in background. */
+  /** Add feed from URL (site or direct feed). Adds immediately, discovers + fetches in background. */
   async function addFeed(urlInput) {
     let url = (urlInput || '').trim();
     if (!url) return false;
@@ -643,12 +685,20 @@
 
     window.addEventListener('hashchange', () => {
       if (beforeArticleView || restoringView || navigatingToFeed) return;
-      const hash = (window.location.hash || '#all').slice(1);
-      const viewId = ['all', 'feeds', 'settings', 'help'].includes(hash) ? hash : 'all';
+      const rawHash = (window.location.hash || '#all').slice(1);
+      const baseView = rawHash.startsWith('all:') ? 'all' : rawHash.split(':')[0];
+      const feedIdFromHash = rawHash.startsWith('all:') ? rawHash.slice(4) : null;
+      const viewId = ['all', 'feeds', 'settings', 'help'].includes(baseView) ? baseView : 'all';
       UI.showView(viewId);
       if (viewId === 'all') {
-        currentFeedId = null;
-        renderAll();
+        if (feedIdFromHash !== currentFeedId) {
+          currentFeedId = feedIdFromHash && feedMap[feedIdFromHash] ? feedIdFromHash : null;
+          if (currentFeedId) {
+            renderFeedView(currentFeedId);
+          } else {
+            renderAll();
+          }
+        }
       } else if (viewId === 'feeds') {
         currentFeedId = null;
         if (openAddFeedOnFeeds) {
@@ -1051,7 +1101,7 @@
         showToast('No feeds to refresh');
         return;
       }
-      await refreshAllFeeds({ noCache: true });
+      await refreshAllFeeds({ all: true, noCache: true });
     });
 
     document.getElementById('btn-force-reload-app')?.addEventListener('click', async () => {
@@ -1234,7 +1284,9 @@
 
   function wirePullToRefresh() {
     const list = document.getElementById('view-all');
-    if (list) UI.initPullToRefresh(list, refreshAllFeeds);
+    if (list) {
+      UI.initPullToRefresh(list, () => refreshAllFeeds());
+    }
   }
 
   function wireLoadMore() {
@@ -1297,7 +1349,16 @@
     }
     applyTheme();
     await loadFeeds();
-    await renderAll();
+    const hash = (window.location.hash || '#all').slice(1);
+    const feedIdFromHash = hash.startsWith('all:') ? hash.slice(4) : null;
+    if (feedIdFromHash && feedMap[feedIdFromHash]) currentFeedId = feedIdFromHash;
+    else currentFeedId = null;
+    const viewId = hash.startsWith('all') ? 'all' : (['feeds', 'settings', 'about', 'help'].includes(hash) ? hash : 'all');
+    UI.showView(viewId);
+    if (viewId === 'all') {
+      if (currentFeedId) await renderFeedView(currentFeedId);
+      else await renderAll();
+    }
     wireNavigation();
     wireAddFeedDialog();
     wireFeeds();
@@ -1306,9 +1367,6 @@
     wireSettings();
     wireShareAndInstall();
     wirePullToRefresh();
-
-    const hash = (window.location.hash || '#all').slice(1);
-    UI.showView(['all', 'feeds', 'settings', 'about', 'help'].includes(hash) ? hash : 'all');
 
     if (feeds.length > 0) await refreshAllFeeds();
     scheduleRefresh();
