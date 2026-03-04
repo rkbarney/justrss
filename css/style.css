@@ -548,6 +548,12 @@ body[data-nav-position="bottom"] .toast {
   text-decoration: underline;
 }
 
+.hint .setting-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
 .import-status-wrap #import-status {
   white-space: pre-wrap;
 }

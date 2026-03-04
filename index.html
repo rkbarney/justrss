@@ -15,7 +15,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover">
   <meta name="theme-color" content="#0d0d0d">
-  <meta name="description" content="RSS Reader - Your feed, your control. Subscribe to blogs and read without algorithms.">
+  <meta name="description" content="RSS Reader - Your feed, your control. Subscribe to creators, news, and more — no algorithm.">
+  <link rel="canonical" href="https://justrss.app/">
+  <meta property="og:title" content="JustRSS – RSS reader, no account, no algorithm">
+  <meta property="og:description" content="RSS Reader - Your feed, your control. Subscribe to creators, news, and more — no algorithm.">
+  <meta property="og:url" content="https://justrss.app/">
+  <meta property="og:type" content="website">
   <title>JustRSS</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8F%B4%E2%80%8D%E2%98%A0%EF%B8%8F%3C/text%3E%3C/svg%3E">
   <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8F%B4%E2%80%8D%E2%98%A0%EF%B8%8F%3C/text%3E%3C/svg%3E">
@@ -124,7 +129,7 @@
               <option value="100">100</option>
             </select>
           </div>
-          <p class="hint">Font size can be adjusted in your browser or device settings.</p>
+          <p class="hint"><strong class="setting-label">Font size</strong> can be adjusted in your browser or device settings.</p>
           <div class="setting-row">
             <span>Feed order</span>
             <select id="setting-feed-order" aria-label="Feed order">
@@ -183,7 +188,7 @@
           <h2 class="about-title">What is JustRSS?</h2>
           <p class="about-text">JustRSS is a simple browser-only RSS reader I built because I couldn't find a way to see the stuff I like online without all the stuff I don't.</p>
           <p class="about-text">It's a chronological feed of whatever you subscribe to—no pictures, videos, ads, algorithms, or engagement traps. The whole thing runs in your browser as a static site. No logins, no accounts, no data about you stored or sold anywhere. I run a small helper service to fetch feeds — but it sees nothing about you, just the feed URLs you request. If you're privacy-conscious, the whole thing is open source and you can run your own.</p>
-          <p class="about-text">It supports any blog, news site, or RSS URL. For YouTube, paste a channel URL; for Substack, paste the publication URL. (It doesn't work for platforms that have disabled RSS to trap users—X, Meta, TikTok, etc.—which is another reason to leave them.)</p>
+          <p class="about-text">It supports any site, news source, or RSS URL. For YouTube, paste a channel URL; for Substack, paste the publication URL. (It doesn't work for platforms that have disabled RSS to trap users—X, Meta, TikTok, etc.—which is another reason to leave them.)</p>
 
           <h2 class="about-title">Why did you build this?</h2>
           <p class="about-text">Every other RSS reader I tried was either paid, had ads, or had attention-hacking “features” that made it feel nearly identical to what I was trying to escape. JustRSS is the opposite: no account, no sync, no algorithm, no feed recommendations.</p>
@@ -192,14 +197,14 @@
           <p class="about-text">RSS is an open format designed before corporate greed enshittified the internet. There's no lock-in here. You can import and export your subscriptions in standard formats. You can always leave and take everything you love with you—unlike those other sites we all need to leave.</p>
 
           <h2 class="about-title">Why should we leave the big algorithmic feeds?</h2>
-          <p class="about-text">We don't have to stay on the internet that sucks. We can build a better internet. It's easier than ever. All we have to do is leave. Start posting on platforms that allow RSS feeds and other open formats. Follow creators, friends and family. Start your own blog.</p>
+          <p class="about-text">We don't have to stay on the internet that sucks. We can build a better internet. It's easier than ever. All we have to do is leave. Start posting on platforms that allow RSS feeds and other open formats. Follow creators, friends and family. Publish your own site.</p>
 
           <h2 class="about-title">What is RSS?</h2>
           <p class="about-text">RSS is how the web was meant to work. When a website publishes something new, their RSS feed updates automatically. You subscribe once, and new content comes to you — no algorithm, no ads, no one deciding what you see.</p>
 
           <h2 class="about-title">How do I find an RSS feed?</h2>
           <ul>
-            <li><strong>News sites and blogs:</strong> Most have a feed at <code>/feed</code> or <code>/rss</code> — try pasting the website URL into JustRSS and we'll find it automatically.</li>
+            <li><strong>News and other sites:</strong> Most have a feed at <code>/feed</code> or <code>/rss</code> — try pasting the website URL into JustRSS and we'll find it automatically.</li>
             <li><strong>Substack:</strong> Paste the newsletter URL — we'll find the feed.</li>
             <li><strong>YouTube:</strong> Go to the channel page, copy the URL, paste it in the YouTube tab.</li>
             <li><strong>Podcasts:</strong> Use the Podcasts tab to search by name.</li>
@@ -241,7 +246,7 @@
             <label for="add-feed-input-rss">RSS feed or website URL</label>
             <a href="#help" id="add-feed-whats-this" class="add-feed-inline-link">What's this?</a>
           </div>
-          <input type="url" id="add-feed-input-rss" placeholder="e.g. blog.substack.com, podcasts.apple.com/..., or feed URL" autocomplete="url">
+          <input type="url" id="add-feed-input-rss" placeholder="e.g. author.substack.com, podcasts.apple.com/..., or feed URL" autocomplete="url">
           <p id="add-feed-hint-rss" class="hint"></p>
           <div id="add-feed-pending-rss" class="add-feed-pending-list" aria-live="polite"></div>
           <div class="add-feed-dialog-actions">
