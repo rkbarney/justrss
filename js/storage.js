@@ -290,6 +290,7 @@ const DEFAULTS = {
   postsPerPage: 15,
   feedOrder: 'alphabetical',
   navPosition: 'top',
+  proxyUrl: '',
 };
 
 function getSettings() {
