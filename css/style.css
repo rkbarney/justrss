@@ -316,6 +316,11 @@ body[data-nav-position="bottom"] .toast {
   color: var(--text);
 }
 
+.article-item-title a {
+  color: inherit;
+  text-decoration: none;
+}
+
 .article-item-meta {
   font-size: 0.75rem;
   color: var(--text-muted);
