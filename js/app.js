@@ -389,7 +389,8 @@
   }
 
   function getProxyList() {
-    const url = normalizeProxyUrl(window.JUSTRSS_CONFIG?.defaultProxyUrl || '');
+    const custom = Storage.getSettings().proxyUrl || '';
+    const url = normalizeProxyUrl(custom || window.JUSTRSS_CONFIG?.defaultProxyUrl || '');
     return url ? [url] : [];
   }
 
@@ -1095,6 +1096,16 @@
       Storage.saveSettings(s);
       renderAll();
     });
+
+    const proxyInput = document.getElementById('setting-proxy-url');
+    if (proxyInput) {
+      proxyInput.value = s.proxyUrl || '';
+      proxyInput.placeholder = window.JUSTRSS_CONFIG?.defaultProxyUrl || 'https://your-worker.workers.dev';
+      proxyInput.addEventListener('change', (e) => {
+        s.proxyUrl = e.target.value.trim();
+        Storage.saveSettings(s);
+      });
+    }
 
     document.getElementById('btn-force-refresh')?.addEventListener('click', async () => {
       if (feeds.length === 0) {

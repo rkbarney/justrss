@@ -667,6 +667,33 @@ body[data-nav-position="bottom"] .toast {
   color: var(--text);
 }
 
+.setting-row-stacked {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.setting-row-stacked input[type="text"] {
+  width: 100%;
+  min-height: 36px;
+  padding: 4px 8px;
+  font-size: 0.9rem;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.setting-row-stacked input[type="text"]:focus {
+  outline: none;
+  border-color: var(--text);
+}
+
+.setting-row-stacked .hint {
+  margin: 0;
+}
+
 .setting-toggle input[type="checkbox"] {
   width: 44px;
   height: 24px;
