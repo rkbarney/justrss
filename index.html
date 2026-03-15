@@ -39,6 +39,7 @@
         <nav class="app-header-nav" aria-label="Main">
           <a href="#feeds" class="header-nav-link" data-view="feeds">Feeds</a>
           <a href="#settings" class="header-nav-link" data-view="settings">Settings</a>
+          <a href="#updates" class="header-nav-link" data-view="updates">Updates</a>
           <a href="#help" class="header-nav-link" data-view="help">FAQ</a>
           <button type="button" id="btn-share-main" class="header-nav-link" aria-label="Share or add to home screen">Share</button>
         </nav>
@@ -178,6 +179,11 @@
         </article>
       </section>
 
+      <!-- Updates (GitHub PRs) -->
+      <section id="view-updates" class="view">
+        <div id="updates-list" class="article-list" role="list" aria-live="polite"></div>
+      </section>
+
       <!-- FAQ (About + Help) -->
       <section id="view-help" class="view">
         <div class="about-content">
@@ -285,6 +291,7 @@
   <script src="js/storage.js"></script>
   <script src="js/feed-parser.js"></script>
   <script src="js/ui.js"></script>
+  <script src="js/updates.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

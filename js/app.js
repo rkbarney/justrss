@@ -689,8 +689,9 @@
       const rawHash = (window.location.hash || '#all').slice(1);
       const baseView = rawHash.startsWith('all:') ? 'all' : rawHash.split(':')[0];
       const feedIdFromHash = rawHash.startsWith('all:') ? rawHash.slice(4) : null;
-      const viewId = ['all', 'feeds', 'settings', 'help'].includes(baseView) ? baseView : 'all';
+      const viewId = ['all', 'feeds', 'settings', 'help', 'updates'].includes(baseView) ? baseView : 'all';
       UI.showView(viewId);
+      if (viewId === 'updates') Updates.load();
       if (viewId === 'all') {
         if (feedIdFromHash !== currentFeedId) {
           currentFeedId = feedIdFromHash && feedMap[feedIdFromHash] ? feedIdFromHash : null;
