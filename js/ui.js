@@ -180,7 +180,7 @@ const UI = {
       el.innerHTML = `
         <span class="article-item-swipe-hint left" aria-hidden="true">Read</span>
         <span class="article-item-swipe-hint right" aria-hidden="true">Hide</span>
-        <h2 class="article-item-title">${UI.escapeHtml(a.title)}</h2>
+        <h2 class="article-item-title" dir="auto">${UI.escapeHtml(a.title)}</h2>
         <div class="article-item-meta">${metaParts.join(' · ')}</div>
       `;
       container.appendChild(el);
@@ -222,12 +222,14 @@ const UI = {
     const titleEl = document.getElementById('article-title');
     const displayUrl = UI.getArticleDisplayUrl(article, feed);
     titleEl.textContent = article?.title || '';
+    titleEl.setAttribute('dir', 'auto');
     titleEl.href = displayUrl || '#';
     titleEl.style.pointerEvents = displayUrl ? '' : 'none';
     document.getElementById('article-meta').innerHTML = feed
       ? `${UI.escapeHtml(feed.title)} · ${UI.formatDate(article?.published)}`
       : '';
     const body = document.getElementById('article-body');
+    body.setAttribute('dir', 'auto');
     const content = (article?.content || '').trim();
     const plainText = content ? UI.stripHtml(content) : '';
     const TRUNCATE_LEN = 250;
