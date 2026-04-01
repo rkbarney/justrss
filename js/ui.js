@@ -307,11 +307,11 @@ const UI = {
     }, { passive: true });
     container.addEventListener('touchmove', (e) => {
       // Use window.scrollY since the body is the actual scroll container for this view.
-      // Clear the pulling state if the user is no longer at the top or reverses direction.
       if (window.scrollY <= 0 && e.touches[0].clientY - startY > 40 && indicator) {
         indicator.textContent = 'Release to refresh';
         indicator.classList.add('pulling');
-      } else if (indicator?.classList.contains('pulling')) {
+      } else if (window.scrollY > 0 && indicator?.classList.contains('pulling')) {
+        // Cancel pull-to-refresh if the user has scrolled down from the top.
         indicator.classList.remove('pulling');
         indicator.textContent = '';
       }
