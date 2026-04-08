@@ -499,8 +499,8 @@
     return title;
   }
 
-  /** Fetch feed in background and update storage. Called after feed is added with "Loading…". appleUrl = fallback to discover feed from Apple Podcasts page when feedUrl 404s. */
-  async function fetchFeedInBackground(feedId, feedUrl, appleUrl = '') {
+  /** Fetch feed in background and update storage. Called after feed is added with "Loading…". appleUrl = fallback to discover feed from Apple Podcasts page when feedUrl 404s. discoveryFallbackUrl = fallback URL to discover feed via HTML link scanning (e.g. original Substack profile URL). */
+  async function fetchFeedInBackground(feedId, feedUrl, appleUrl = '', discoveryFallbackUrl = '') {
     const proxyList = getProxyList();
     let parsed = null;
     for (const proxy of proxyList) {
@@ -515,6 +515,25 @@
       for (const proxy of proxyList) {
         try {
           const discovered = await FeedParser.discoverFeedUrl(appleUrl, proxy);
+          if (discovered && discovered !== feedUrl) {
+            const f = await Storage.getFeeds().then((list) => list.find((x) => x.id === feedId));
+            if (f) {
+              f.url = discovered;
+              await Storage.updateFeed(f);
+            }
+            parsed = await FeedParser.fetchAndParse(discovered, proxy);
+            feedUrl = discovered;
+            break;
+          }
+        } catch {
+          continue;
+        }
+      }
+    }
+    if (!parsed && discoveryFallbackUrl) {
+      for (const proxy of proxyList) {
+        try {
+          const discovered = await FeedParser.discoverFeedUrl(discoveryFallbackUrl, proxy);
           if (discovered && discovered !== feedUrl) {
             const f = await Storage.getFeeds().then((list) => list.find((x) => x.id === feedId));
             if (f) {
@@ -605,8 +624,8 @@
     }
   }
 
-  /** Add a feed when we already have the feed URL. Adds immediately, fetches in background. appleUrl = Apple Podcasts link (for podcasts from iTunes search). */
-  async function addFeedByUrl(feedUrl, title, appleUrl = '') {
+  /** Add a feed when we already have the feed URL. Adds immediately, fetches in background. appleUrl = Apple Podcasts link (for podcasts from iTunes search). discoveryFallbackUrl = fallback URL to discover feed via HTML link scanning if feedUrl fails. */
+  async function addFeedByUrl(feedUrl, title, appleUrl = '', discoveryFallbackUrl = '') {
     const feed = { url: feedUrl, title: title || titleFromUrl(feedUrl) || 'Loading…', order: feeds.length, lastUpdate: Date.now() };
     if (appleUrl) {
       feed.appleUrl = appleUrl;
@@ -615,7 +634,7 @@
     const saved = await Storage.addFeed(feed);
     await loadFeeds();
     await renderAll();
-    fetchFeedInBackground(saved.id, feedUrl, appleUrl);
+    fetchFeedInBackground(saved.id, feedUrl, appleUrl, discoveryFallbackUrl);
     return true;
   }
 
@@ -889,22 +908,25 @@
           const u = new URL(url);
           const h = u.hostname.toLowerCase();
           let feedUrl;
+          let subName;
           if (h === 'substack.com' || h === 'www.substack.com') {
             const match = u.pathname.match(/^\/@([^/]+)/);
             if (match) {
               feedUrl = `https://${match[1]}.substack.com/feed`;
+              subName = match[1];
             } else {
               const base = u.origin.replace(/\/$/, '');
               const path = u.pathname.replace(/\/p\/[^/]*$/, '').replace(/\/$/, '') || '';
               feedUrl = base + path + '/feed';
+              subName = u.hostname;
             }
           } else {
             const base = u.origin.replace(/\/$/, '');
             const path = u.pathname.replace(/\/p\/[^/]*$/, '').replace(/\/$/, '') || '';
             feedUrl = base + path + '/feed';
+            subName = u.hostname.replace(/^www\./, '').replace(/\.substack\.com$/, '') || u.hostname;
           }
-          const subName = u.hostname.replace(/^www\./, '').replace(/\.substack\.com$/, '') || u.pathname.match(/^\/@([^/]+)/)?.[1] || u.hostname;
-          const ok = await addFeedByUrl(feedUrl, subName);
+          const ok = await addFeedByUrl(feedUrl, subName, '', url);
           if (ok) closeAddFeedDialog();
         } catch {
           hintRss.textContent = 'Invalid URL.';
