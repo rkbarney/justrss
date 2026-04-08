@@ -72,11 +72,12 @@
    * Single refresh entry point. Refreshes the current view (one feed or all) and re-renders it.
    * - opts.all: true = always refresh all feeds and show main list (e.g. Settings "Force refresh").
    * - opts.noCache: true = bypass cache.
-   * Otherwise: if currentFeedId is set, refresh that feed and stay on it; else refresh all and show main list.
+   * Otherwise: if currentFeedId is set, refresh that feed and stay on it; if on feeds tab, stay there; else refresh all and show main list.
    */
   async function refreshAllFeeds(opts = {}) {
     const { noCache = false, all: forceAll = false } = opts;
     const singleFeedId = forceAll ? null : currentFeedId;
+    const onFeedsView = !forceAll && (window.location.hash || '#all').slice(1) === 'feeds';
     const proxy = getEffectiveProxy();
     const loading = document.getElementById('loading-articles');
     const refreshBtn = document.getElementById('btn-refresh');
@@ -118,10 +119,14 @@
       await renderAll();
     } else if (singleFeedId) {
       await renderFeedView(singleFeedId);
+    } else if (onFeedsView) {
+      await loadFeeds();
+      const unreadCounts = await getUnreadCounts();
+      UI.renderFeedList(feeds, unreadCounts);
     } else {
       await renderAll();
     }
-    syncHashFromView();
+    if (!onFeedsView) syncHashFromView();
     scheduleRefresh();
     showToast(noCache ? 'Force refreshed' : 'Refreshed');
   }
