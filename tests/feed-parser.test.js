@@ -142,6 +142,38 @@ describe('FeedParser parseRSS2JSON', () => {
   });
 });
 
+describe('FeedParser normalizeInputToFeedUrl (Substack)', () => {
+  const FeedParser = loadFeedParser();
+
+  it('resolves substack.com/@handle to handle.substack.com/feed', async () => {
+    const url = await FeedParser.normalizeInputToFeedUrl('https://substack.com/@benandstuff', null);
+    assert.strictEqual(url, 'https://benandstuff.substack.com/feed');
+  });
+
+  it('strips tracking params from substack.com/@handle URLs', async () => {
+    const url = await FeedParser.normalizeInputToFeedUrl(
+      'https://substack.com/@benandstuff?r=44mxm&utm_medium=ios&utm_source=stories&shareImageVariant=blur',
+      null
+    );
+    assert.strictEqual(url, 'https://benandstuff.substack.com/feed');
+  });
+
+  it('resolves www.substack.com/@handle', async () => {
+    const url = await FeedParser.normalizeInputToFeedUrl('https://www.substack.com/@testuser', null);
+    assert.strictEqual(url, 'https://testuser.substack.com/feed');
+  });
+
+  it('resolves username.substack.com to its feed', async () => {
+    const url = await FeedParser.normalizeInputToFeedUrl('https://example.substack.com', null);
+    assert.strictEqual(url, 'https://example.substack.com/feed');
+  });
+
+  it('resolves username.substack.com/p/article to feed', async () => {
+    const url = await FeedParser.normalizeInputToFeedUrl('https://example.substack.com/p/my-post', null);
+    assert.strictEqual(url, 'https://example.substack.com/feed');
+  });
+});
+
 describe('FeedParser parseXML (invalid)', () => {
   const FeedParser = loadFeedParser();
 
