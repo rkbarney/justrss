@@ -557,7 +557,7 @@
     if (!parsed) {
       const f = await Storage.getFeeds().then((list) => list.find((x) => x.id === feedId));
       if (f) {
-        showToast(`Removed "${f.title || f.url}" — feed not found. Try pasting the RSS URL in the RSS tab.`, 6000);
+        showToast(`Removed "${f.title || f.url}" — couldn't load feed from ${feedUrl}. Try pasting the RSS URL directly.`, 8000);
         await Storage.deleteFeed(feedId);
       }
       await loadFeeds();
@@ -914,24 +914,31 @@
           const h = u.hostname.toLowerCase();
           let feedUrl;
           let subName;
+          let discoveryFallbackUrl;
           if (h === 'substack.com' || h === 'www.substack.com') {
             const match = u.pathname.match(/^\/@([^/]+)/);
             if (match) {
               feedUrl = `https://${match[1]}.substack.com/feed`;
               subName = match[1];
+              // Use newsletter homepage as discovery fallback: it has the RSS link and
+              // if the newsletter uses a custom domain the fetched HTML will have the
+              // absolute custom-domain feed URL.
+              discoveryFallbackUrl = `https://${match[1]}.substack.com`;
             } else {
               const base = u.origin.replace(/\/$/, '');
               const path = u.pathname.replace(/\/p\/[^/]*$/, '').replace(/\/$/, '') || '';
               feedUrl = base + path + '/feed';
               subName = u.hostname;
+              discoveryFallbackUrl = base + (path || '');
             }
           } else {
             const base = u.origin.replace(/\/$/, '');
             const path = u.pathname.replace(/\/p\/[^/]*$/, '').replace(/\/$/, '') || '';
             feedUrl = base + path + '/feed';
             subName = u.hostname.replace(/^www\./, '').replace(/\.substack\.com$/, '') || u.hostname;
+            discoveryFallbackUrl = base + (path || '');
           }
-          const ok = await addFeedByUrl(feedUrl, subName, '', url);
+          const ok = await addFeedByUrl(feedUrl, subName, '', discoveryFallbackUrl);
           if (ok) closeAddFeedDialog();
         } catch {
           hintRss.textContent = 'Invalid URL.';
