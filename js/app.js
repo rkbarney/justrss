@@ -1228,10 +1228,10 @@
       const url = urlField.value;
       if (!url) return;
       const feedList = selectedFeedTitles.map((t) => `• ${t}`).join('\n');
-      const text = `Hey, wanted to share some RSS feeds I thought you'd enjoy.\n\n${feedList}`;
+      const text = `Hey, here are a couple RSS feeds I think that you'd enjoy. You can subscribe to them with JustRSS.app, export them to your preferred RSS reader, or just click on a link you find interesting.\n\n${feedList}`;
       try {
         if (navigator.share) {
-          await navigator.share({ title: 'RSS feeds', text, url });
+          await navigator.share({ title: 'Minimalist RSS reader—no accounts, no algorithms, no ads', text, url });
         } else {
           await navigator.clipboard.writeText(url);
           showToast('Link copied');
