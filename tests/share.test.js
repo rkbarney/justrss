@@ -209,6 +209,15 @@ describe('planImport', () => {
     assert.deepEqual([...toAdd], ['https://valid.com/feed']);
     assert.strictEqual(skipped, 3);
   });
+
+  it('deduplicates URLs appearing more than once in the import list', () => {
+    const { toAdd, skipped } = FeedShare.planImport(
+      ['https://a.com/feed', 'https://b.com/rss', 'https://a.com/feed'],
+      [],
+    );
+    assert.deepEqual([...toAdd], ['https://a.com/feed', 'https://b.com/rss']);
+    assert.strictEqual(skipped, 1);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -237,6 +246,42 @@ describe('getImportParam', () => {
     const encoded = FeedShare.encodeFeedUrls(urls);
     const param = FeedShare.getImportParam(`?import=${encoded}`);
     assert.strictEqual(param, encoded);
+  });
+
+  it('preserves a payload containing + when round-tripped through a query string', () => {
+    // Standard Base64 uses +, /, and =. URLSearchParams treats bare + as space,
+    // so buildShareUrl must percent-encode the payload. This verifies getImportParam
+    // restores the original value (including +) after encoding via URLSearchParams.
+    const encoded = 'abc+def/ghi==';
+    const search = `?${new URLSearchParams({ import: encoded }).toString()}`;
+    const param = FeedShare.getImportParam(search);
+    assert.strictEqual(param, encoded);
+  });
+});
+
+describe('buildShareUrl', () => {
+  it('produces a URL whose ?import= value survives a full round-trip decode', () => {
+    const { FeedShare: fs } = loadFeedShareDom('http://localhost/');
+    const urls = ['https://example.com/feed', 'https://another.org/rss'];
+    const shareUrl = fs.buildShareUrl(urls);
+    const param = fs.getImportParam(new URL(shareUrl).search);
+    const result = fs.decodeFeedUrls(param);
+    assert.strictEqual(result.error, null);
+    assert.strictEqual(result.urls.length, 2);
+    assert.strictEqual(result.urls[0], urls[0]);
+    assert.strictEqual(result.urls[1], urls[1]);
+  });
+
+  it('percent-encodes + characters so they are not decoded as spaces', () => {
+    // A payload containing + (common in base64) must not be corrupted by query string parsing.
+    const { FeedShare: fs } = loadFeedShareDom('http://localhost/');
+    // Generate a URL list whose encoding is known to contain '+' in standard base64
+    // by testing that getImportParam(new URL(shareUrl).search) === the original encoded value.
+    const urls = ['https://example.com/feed'];
+    const encoded = fs.encodeFeedUrls(urls);
+    const shareUrl = fs.buildShareUrl(urls);
+    const recovered = fs.getImportParam(new URL(shareUrl).search);
+    assert.strictEqual(recovered, encoded);
   });
 });
 

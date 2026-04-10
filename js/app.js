@@ -630,16 +630,18 @@
     }
   }
 
-  /** Add a feed when we already have the feed URL. Adds immediately, fetches in background. appleUrl = Apple Podcasts link (for podcasts from iTunes search). discoveryFallbackUrl = fallback URL to discover feed via HTML link scanning if feedUrl fails. */
-  async function addFeedByUrl(feedUrl, title, appleUrl = '', discoveryFallbackUrl = '') {
+  /** Add a feed when we already have the feed URL. Adds immediately, fetches in background. appleUrl = Apple Podcasts link (for podcasts from iTunes search). discoveryFallbackUrl = fallback URL to discover feed via HTML link scanning if feedUrl fails. Pass { quiet: true } to skip loadFeeds/renderAll (caller handles a single batch render). */
+  async function addFeedByUrl(feedUrl, title, appleUrl = '', discoveryFallbackUrl = '', { quiet = false } = {}) {
     const feed = { url: feedUrl, title: title || titleFromUrl(feedUrl) || 'Loading…', order: feeds.length, lastUpdate: Date.now() };
     if (appleUrl) {
       feed.appleUrl = appleUrl;
       feed.type = 'podcast';
     }
     const saved = await Storage.addFeed(feed);
-    await loadFeeds();
-    await renderAll();
+    if (!quiet) {
+      await loadFeeds();
+      await renderAll();
+    }
     fetchFeedInBackground(saved.id, feedUrl, appleUrl, discoveryFallbackUrl);
     return true;
   }
@@ -1072,6 +1074,7 @@
       cancelBtn.disabled = false;
       cancelBtn.textContent = 'Cancel';
       dialog.hidden = false;
+      importBtn.focus();
 
       const close = () => { dialog.hidden = true; resolve(); };
       dialog.querySelector('.feed-import-dialog-backdrop').onclick = close;
@@ -1089,11 +1092,16 @@
         let added = 0;
         for (const url of toAdd) {
           try {
-            await addFeedByUrl(url);
+            await addFeedByUrl(url, '', '', '', { quiet: true });
             added++;
           } catch {
             // silently skip invalid URLs
           }
+        }
+
+        if (added > 0) {
+          await loadFeeds();
+          await renderAll();
         }
 
         let msg;
@@ -1161,6 +1169,7 @@
       listEl.querySelectorAll('input[type="checkbox"]').forEach((cb) => cb.addEventListener('change', updateCount));
       updateCount();
       dialog.hidden = false;
+      (listEl.querySelector('input[type="checkbox"]:not(:disabled)') || selectAllBtn)?.focus();
     }
 
     document.getElementById('btn-share-feeds')?.addEventListener('click', showDialog);
@@ -1573,8 +1582,9 @@
 
   async function init() {
     // Strip ?import= param immediately so a page refresh never re-prompts.
-    const importParam = FeedShare?.getImportParam(window.location.search) || null;
-    if (importParam) FeedShare.stripImportParam();
+    // Use ?? null (not || null) so an empty ?import= value is still detected and stripped.
+    const importParam = FeedShare?.getImportParam(window.location.search) ?? null;
+    if (importParam !== null) FeedShare.stripImportParam();
 
     if ('serviceWorker' in navigator) {
       try {
@@ -1605,7 +1615,7 @@
     wireShareAndInstall();
     wirePullToRefresh();
 
-    if (importParam) await handleFeedShareImport(importParam);
+    if (importParam !== null) await handleFeedShareImport(importParam);
 
     if (feeds.length > 0) await refreshAllFeeds();
     scheduleRefresh();

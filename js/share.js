@@ -19,13 +19,32 @@
   const MAX_FEEDS = 15;
 
   /**
+   * UTF-8–safe base64 encode. Works for any valid URL string including IDNs.
+   * For ASCII-only content (all typical feed URLs) the output is identical
+   * to btoa(str), so existing encoded links remain valid.
+   * Uses the encodeURIComponent→unescape→btoa idiom (universally available).
+   */
+  function toBase64(str) {
+    // eslint-disable-next-line no-unescape-usage
+    return btoa(unescape(encodeURIComponent(str)));
+  }
+
+  /**
+   * UTF-8–safe base64 decode. Throws if input is not valid base64.
+   */
+  function fromBase64(b64) {
+    // eslint-disable-next-line no-unescape-usage
+    return decodeURIComponent(escape(atob(b64)));
+  }
+
+  /**
    * Encode an array of feed URLs as base64 JSON.
    * Throws if urls is not an array or exceeds MAX_FEEDS.
    */
   function encodeFeedUrls(urls) {
     if (!Array.isArray(urls)) throw new Error('Expected array of URLs');
     if (urls.length > MAX_FEEDS) throw new Error(`Maximum ${MAX_FEEDS} feeds per share link`);
-    return btoa(JSON.stringify(urls));
+    return toBase64(JSON.stringify(urls));
   }
 
   /**
@@ -37,7 +56,7 @@
   function decodeFeedUrls(encoded) {
     let decoded;
     try {
-      decoded = atob(encoded);
+      decoded = fromBase64(encoded);
     } catch {
       return { urls: null, error: 'invalid_base64', truncated: false };
     }
@@ -63,17 +82,19 @@
 
   /**
    * Build a share URL for the given feed URLs.
-   * Uses the current page's origin + pathname as the base.
+   * Uses URLSearchParams.set so the base64 payload (which may contain +, =, /)
+   * is percent-encoded and survives a query-string round-trip without corruption.
    */
   function buildShareUrl(urls) {
     const encoded = encodeFeedUrls(urls);
-    const base = window.location.origin + window.location.pathname;
-    return `${base}?import=${encoded}`;
+    const url = new URL(window.location.origin + window.location.pathname);
+    url.searchParams.set('import', encoded);
+    return url.toString();
   }
 
   /**
    * Extract the ?import= param from a URL search string.
-   * Returns null if not present.
+   * Returns null if not present, or the raw string value (possibly empty) if present.
    * Pure — does not touch window; pass window.location.search as argument.
    */
   function getImportParam(search) {
@@ -93,13 +114,22 @@
 
   /**
    * Given a list of URLs to import and a list of existing feed URLs,
-   * return { toAdd: string[], skipped: number } where toAdd are new URLs only.
+   * return { toAdd: string[], skipped: number } where toAdd contains each
+   * new, valid URL at most once (deduplicates within the import list too).
    * Pure — no side effects.
    */
   function planImport(urls, existingUrls) {
-    const existingSet = new Set(existingUrls);
-    const toAdd = urls.filter((url) => url && typeof url === 'string' && !existingSet.has(url));
-    const skipped = urls.length - toAdd.length;
+    const seen = new Set(existingUrls);
+    const toAdd = [];
+    let skipped = 0;
+    urls.forEach((url) => {
+      if (!url || typeof url !== 'string' || seen.has(url)) {
+        skipped++;
+        return;
+      }
+      seen.add(url);
+      toAdd.push(url);
+    });
     return { toAdd, skipped };
   }
 
