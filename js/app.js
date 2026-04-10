@@ -1115,6 +1115,7 @@
         importBtn.hidden = true;
         cancelBtn.disabled = false;
         cancelBtn.textContent = 'Done';
+        setTimeout(close, 1800);
       };
     });
   }
@@ -1137,6 +1138,8 @@
     const copyBtn = document.getElementById('share-feeds-copy');
     const shareBtn = document.getElementById('share-feeds-share-btn');
     const max = FeedShare.MAX_FEEDS;
+
+    let selectedFeedTitles = [];
 
     function close() { dialog.hidden = true; }
 
@@ -1192,8 +1195,12 @@
     });
 
     generateBtn?.addEventListener('click', () => {
-      const urls = Array.from(listEl.querySelectorAll('input[type="checkbox"]:checked')).map((cb) => cb.value);
+      const checked = Array.from(listEl.querySelectorAll('input[type="checkbox"]:checked'));
+      const urls = checked.map((cb) => cb.value);
       if (urls.length === 0) return;
+      selectedFeedTitles = checked.map(
+        (cb) => cb.closest('.share-feeds-item')?.querySelector('.share-feeds-item-label')?.textContent || cb.value,
+      );
       try {
         urlField.value = FeedShare.buildShareUrl(urls);
         stepSelect.hidden = true;
@@ -1220,9 +1227,11 @@
     shareBtn?.addEventListener('click', async () => {
       const url = urlField.value;
       if (!url) return;
+      const feedList = selectedFeedTitles.map((t) => `• ${t}`).join('\n');
+      const text = `Hey, wanted to share some RSS feeds I thought you'd enjoy.\n\n${feedList}`;
       try {
         if (navigator.share) {
-          await navigator.share({ title: 'My RSS feeds — JustRSS', url });
+          await navigator.share({ title: 'RSS feeds', text, url });
         } else {
           await navigator.clipboard.writeText(url);
           showToast('Link copied');
