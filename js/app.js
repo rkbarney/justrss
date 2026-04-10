@@ -1115,6 +1115,7 @@
         importBtn.hidden = true;
         cancelBtn.disabled = false;
         cancelBtn.textContent = 'Done';
+        setTimeout(close, 1800);
       };
     });
   }
