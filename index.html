@@ -74,6 +74,7 @@
         <div class="feeds-add-sticky">
           <div class="feeds-toolbar">
             <button type="button" id="btn-add-feed-top" class="btn-primary">+ Add feed</button>
+            <button type="button" id="btn-share-feeds" class="btn-secondary">Share feeds</button>
           </div>
         </div>
         <div id="feed-list" class="feed-list" role="list"></div>
@@ -287,11 +288,57 @@
     </div>
 
 
+    <!-- Share feeds dialog -->
+    <div id="share-feeds-dialog" class="share-feeds-dialog" hidden role="dialog" aria-modal="true" aria-label="Share feeds">
+      <div class="share-feeds-dialog-backdrop"></div>
+      <div class="share-feeds-dialog-content">
+        <div id="share-feeds-step-select">
+          <h2 class="share-feeds-title">Share feeds</h2>
+          <div class="share-feeds-controls">
+            <button type="button" id="share-feeds-select-all" class="btn-secondary">Select all</button>
+            <span id="share-feeds-count" class="share-feeds-count">0 of 15 feeds selected</span>
+          </div>
+          <p id="share-feeds-max-note" class="hint" hidden>Maximum 15 feeds per share link</p>
+          <div id="share-feeds-list" class="share-feeds-list"></div>
+          <div class="share-feeds-actions">
+            <button type="button" id="share-feeds-cancel" class="btn-secondary">Cancel</button>
+            <button type="button" id="share-feeds-generate" class="btn-primary" disabled>Generate link</button>
+          </div>
+        </div>
+        <div id="share-feeds-step-link" hidden>
+          <h2 class="share-feeds-title">Share link</h2>
+          <p class="hint">Anyone who opens this link will be prompted to import these feeds.</p>
+          <input type="text" id="share-feeds-url" class="share-feeds-url-field" readonly aria-label="Share link URL">
+          <div class="share-feeds-actions">
+            <button type="button" id="share-feeds-back" class="btn-secondary">Back</button>
+            <button type="button" id="share-feeds-copy" class="btn-secondary">Copy link</button>
+            <button type="button" id="share-feeds-share-btn" class="btn-primary">Share</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Feed import dialog (shown when ?import= param detected on load) -->
+    <div id="feed-import-dialog" class="feed-import-dialog" hidden role="dialog" aria-modal="true" aria-label="Import feeds from shared link">
+      <div class="feed-import-dialog-backdrop"></div>
+      <div class="feed-import-dialog-content">
+        <h2 class="feed-import-title">Import feeds from shared link?</h2>
+        <p id="feed-import-note" class="hint" hidden></p>
+        <ul id="feed-import-list" class="feed-import-list"></ul>
+        <p id="feed-import-status" class="feed-import-status hint" hidden aria-live="polite"></p>
+        <div class="feed-import-actions">
+          <button type="button" id="feed-import-cancel" class="btn-secondary">Cancel</button>
+          <button type="button" id="feed-import-btn" class="btn-primary">Import</button>
+        </div>
+      </div>
+    </div>
+
   <script src="js/config.js"></script>
   <script src="js/storage.js"></script>
   <script src="js/feed-parser.js"></script>
   <script src="js/ui.js"></script>
   <script src="js/updates.js"></script>
+  <script src="js/share.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
