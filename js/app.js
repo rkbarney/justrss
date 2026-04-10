@@ -1074,7 +1074,6 @@
       cancelBtn.disabled = false;
       cancelBtn.textContent = 'Cancel';
       dialog.hidden = false;
-      importBtn.focus();
 
       const close = () => { dialog.hidden = true; resolve(); };
       dialog.querySelector('.feed-import-dialog-backdrop').onclick = close;
@@ -1169,7 +1168,6 @@
       listEl.querySelectorAll('input[type="checkbox"]').forEach((cb) => cb.addEventListener('change', updateCount));
       updateCount();
       dialog.hidden = false;
-      (listEl.querySelector('input[type="checkbox"]:not(:disabled)') || selectAllBtn)?.focus();
     }
 
     document.getElementById('btn-share-feeds')?.addEventListener('click', showDialog);
