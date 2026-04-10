@@ -18,6 +18,7 @@
   const Storage = window.Storage;
   const FeedParser = window.FeedParser;
   const UI = window.UI;
+  const FeedShare = window.FeedShare;
 
   let feeds = [];
   let feedMap = {};
@@ -629,16 +630,18 @@
     }
   }
 
-  /** Add a feed when we already have the feed URL. Adds immediately, fetches in background. appleUrl = Apple Podcasts link (for podcasts from iTunes search). discoveryFallbackUrl = fallback URL to discover feed via HTML link scanning if feedUrl fails. */
-  async function addFeedByUrl(feedUrl, title, appleUrl = '', discoveryFallbackUrl = '') {
+  /** Add a feed when we already have the feed URL. Adds immediately, fetches in background. appleUrl = Apple Podcasts link (for podcasts from iTunes search). discoveryFallbackUrl = fallback URL to discover feed via HTML link scanning if feedUrl fails. Pass { quiet: true } to skip loadFeeds/renderAll (caller handles a single batch render). */
+  async function addFeedByUrl(feedUrl, title, appleUrl = '', discoveryFallbackUrl = '', { quiet = false } = {}) {
     const feed = { url: feedUrl, title: title || titleFromUrl(feedUrl) || 'Loading…', order: feeds.length, lastUpdate: Date.now() };
     if (appleUrl) {
       feed.appleUrl = appleUrl;
       feed.type = 'podcast';
     }
     const saved = await Storage.addFeed(feed);
-    await loadFeeds();
-    await renderAll();
+    if (!quiet) {
+      await loadFeeds();
+      await renderAll();
+    }
     fetchFeedInBackground(saved.id, feedUrl, appleUrl, discoveryFallbackUrl);
     return true;
   }
@@ -1036,6 +1039,203 @@
     document.getElementById('add-feed-resolve-yt')?.addEventListener('click', resolveYoutubeInput);
   }
 
+  /** Handle ?import= param on app load: decode, validate, show dialog. */
+  async function handleFeedShareImport(importParam) {
+    const result = FeedShare.decodeFeedUrls(importParam);
+    if (result.error === 'invalid_base64' || result.error === 'invalid_json' || result.error === 'not_array') {
+      showToast('This share link appears to be invalid or corrupted.', 5000);
+      return;
+    }
+    if (result.error === 'empty') {
+      showToast('This share link contains no feeds.', 5000);
+      return;
+    }
+    await showFeedImportDialog(result.urls, result.truncated);
+  }
+
+  /** Show the feed import modal and return a Promise that resolves when dismissed. */
+  function showFeedImportDialog(urls, truncated) {
+    return new Promise((resolve) => {
+      const dialog = document.getElementById('feed-import-dialog');
+      if (!dialog) { resolve(); return; }
+      const feedListEl = document.getElementById('feed-import-list');
+      const noteEl = document.getElementById('feed-import-note');
+      const statusEl = document.getElementById('feed-import-status');
+      const importBtn = document.getElementById('feed-import-btn');
+      const cancelBtn = document.getElementById('feed-import-cancel');
+
+      feedListEl.innerHTML = urls.map((url) => `<li class="feed-import-url">${UI.escapeHtml(url)}</li>`).join('');
+      noteEl.textContent = truncated ? 'This link contained more than 15 feeds. Only the first 15 are shown.' : '';
+      noteEl.hidden = !truncated;
+      statusEl.textContent = '';
+      statusEl.hidden = true;
+      importBtn.hidden = false;
+      importBtn.disabled = false;
+      cancelBtn.disabled = false;
+      cancelBtn.textContent = 'Cancel';
+      dialog.hidden = false;
+
+      const close = () => { dialog.hidden = true; resolve(); };
+      dialog.querySelector('.feed-import-dialog-backdrop').onclick = close;
+      cancelBtn.onclick = close;
+
+      importBtn.onclick = async () => {
+        importBtn.disabled = true;
+        cancelBtn.disabled = true;
+        statusEl.textContent = 'Importing…';
+        statusEl.hidden = false;
+
+        const existingFeeds = await Storage.getFeeds();
+        const { toAdd, skipped } = FeedShare.planImport(urls, existingFeeds.map((f) => f.url));
+
+        let added = 0;
+        for (const url of toAdd) {
+          try {
+            await addFeedByUrl(url, '', '', '', { quiet: true });
+            added++;
+          } catch {
+            // silently skip invalid URLs
+          }
+        }
+
+        if (added > 0) {
+          await loadFeeds();
+          await renderAll();
+        }
+
+        let msg;
+        if (added === 0 && skipped > 0) {
+          msg = 'All feeds already in your list';
+        } else if (added > 0 && skipped > 0) {
+          msg = `${added} feed${added !== 1 ? 's' : ''} added, ${skipped} already in your list`;
+        } else {
+          msg = `${added} feed${added !== 1 ? 's' : ''} added`;
+        }
+        statusEl.textContent = msg;
+        importBtn.hidden = true;
+        cancelBtn.disabled = false;
+        cancelBtn.textContent = 'Done';
+      };
+    });
+  }
+
+  /** Wire the "Share feeds" button and dialog (feed selection → link display). */
+  function wireShareFeeds() {
+    const dialog = document.getElementById('share-feeds-dialog');
+    if (!dialog) return;
+    const backdrop = dialog.querySelector('.share-feeds-dialog-backdrop');
+    const stepSelect = document.getElementById('share-feeds-step-select');
+    const stepLink = document.getElementById('share-feeds-step-link');
+    const selectAllBtn = document.getElementById('share-feeds-select-all');
+    const countEl = document.getElementById('share-feeds-count');
+    const maxNoteEl = document.getElementById('share-feeds-max-note');
+    const listEl = document.getElementById('share-feeds-list');
+    const cancelBtn = document.getElementById('share-feeds-cancel');
+    const generateBtn = document.getElementById('share-feeds-generate');
+    const urlField = document.getElementById('share-feeds-url');
+    const backBtn = document.getElementById('share-feeds-back');
+    const copyBtn = document.getElementById('share-feeds-copy');
+    const shareBtn = document.getElementById('share-feeds-share-btn');
+    const max = FeedShare.MAX_FEEDS;
+
+    function close() { dialog.hidden = true; }
+
+    function updateCount() {
+      const checkboxes = listEl.querySelectorAll('input[type="checkbox"]');
+      const checked = listEl.querySelectorAll('input[type="checkbox"]:checked');
+      const count = checked.length;
+      countEl.textContent = `${count} of ${max} feeds selected`;
+      selectAllBtn.textContent = checkboxes.length > 0 && count === checkboxes.length ? 'Deselect all' : 'Select all';
+      maxNoteEl.hidden = count < max;
+      generateBtn.disabled = count === 0;
+      checkboxes.forEach((cb) => {
+        const item = cb.closest('.share-feeds-item');
+        const atMax = !cb.checked && count >= max;
+        cb.disabled = atMax;
+        item?.classList.toggle('disabled', atMax);
+      });
+    }
+
+    function showDialog() {
+      stepSelect.hidden = false;
+      stepLink.hidden = true;
+      listEl.innerHTML = feeds.map((f) => `
+        <label class="share-feeds-item">
+          <input type="checkbox" value="${UI.escapeHtml(f.url)}">
+          <span class="share-feeds-item-label">${UI.escapeHtml(f.title || f.url)}</span>
+        </label>
+      `).join('');
+      listEl.querySelectorAll('input[type="checkbox"]').forEach((cb) => cb.addEventListener('change', updateCount));
+      updateCount();
+      dialog.hidden = false;
+    }
+
+    document.getElementById('btn-share-feeds')?.addEventListener('click', showDialog);
+    backdrop?.addEventListener('click', close);
+    cancelBtn?.addEventListener('click', close);
+    dialog.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+
+    selectAllBtn?.addEventListener('click', () => {
+      const checkboxes = listEl.querySelectorAll('input[type="checkbox"]');
+      const allChecked = Array.from(checkboxes).every((cb) => cb.checked);
+      if (allChecked) {
+        checkboxes.forEach((cb) => { cb.checked = false; cb.disabled = false; });
+      } else {
+        let count = 0;
+        checkboxes.forEach((cb) => {
+          if (count < max) { cb.checked = true; count++; }
+          else cb.checked = false;
+          cb.disabled = false;
+        });
+      }
+      updateCount();
+    });
+
+    generateBtn?.addEventListener('click', () => {
+      const urls = Array.from(listEl.querySelectorAll('input[type="checkbox"]:checked')).map((cb) => cb.value);
+      if (urls.length === 0) return;
+      try {
+        urlField.value = FeedShare.buildShareUrl(urls);
+        stepSelect.hidden = true;
+        stepLink.hidden = false;
+        urlField.select();
+      } catch {
+        showToast('Could not generate share link.');
+      }
+    });
+
+    backBtn?.addEventListener('click', () => { stepSelect.hidden = false; stepLink.hidden = true; });
+
+    copyBtn?.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(urlField.value);
+      } catch {
+        urlField.select();
+        document.execCommand('copy');
+      }
+      copyBtn.textContent = 'Copied!';
+      setTimeout(() => { copyBtn.textContent = 'Copy link'; }, 2000);
+    });
+
+    shareBtn?.addEventListener('click', async () => {
+      const url = urlField.value;
+      if (!url) return;
+      try {
+        if (navigator.share) {
+          await navigator.share({ title: 'My RSS feeds — JustRSS', url });
+        } else {
+          await navigator.clipboard.writeText(url);
+          showToast('Link copied');
+        }
+      } catch (e) {
+        if (e.name !== 'AbortError') {
+          try { await navigator.clipboard.writeText(url); } catch { /* ignore */ }
+          showToast('Link copied');
+        }
+      }
+    });
+  }
+
   function wireFeeds() {
   }
 
@@ -1379,6 +1579,11 @@
   }
 
   async function init() {
+    // Strip ?import= param immediately so a page refresh never re-prompts.
+    // Use ?? null (not || null) so an empty ?import= value is still detected and stripped.
+    const importParam = FeedShare?.getImportParam(window.location.search) ?? null;
+    if (importParam !== null) FeedShare.stripImportParam();
+
     if ('serviceWorker' in navigator) {
       try {
         await navigator.serviceWorker.register('service-worker.js');
@@ -1401,11 +1606,14 @@
     wireNavigation();
     wireAddFeedDialog();
     wireFeeds();
+    wireShareFeeds();
     wireLoadMore();
     wireArticleReader();
     wireSettings();
     wireShareAndInstall();
     wirePullToRefresh();
+
+    if (importParam !== null) await handleFeedShareImport(importParam);
 
     if (feeds.length > 0) await refreshAllFeeds();
     scheduleRefresh();
