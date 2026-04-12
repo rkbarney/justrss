@@ -178,7 +178,7 @@ const UI = {
       el.setAttribute('role', 'listitem');
       el.dataset.articleId = a.id;
       el.innerHTML = `
-<h2 class="article-item-title" dir="auto">${UI.escapeHtml(a.title)}</h2>
+        <h2 class="article-item-title" dir="auto">${UI.escapeHtml(a.title)}</h2>
         <div class="article-item-meta">${metaParts.join(' · ')}</div>
       `;
       container.appendChild(el);

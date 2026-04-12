@@ -4,7 +4,7 @@
   "description": "A lightweight RSS reader PWA",
   "type": "module",
   "scripts": {
-    "test": "node --test tests/",
+    "test": "node --test 'tests/*.test.js'",
     "generate-icons": "node scripts/generate-icons.js",
     "bump-cache": "node scripts/bump-cache.js",
     "deploy": "npm run bump-cache",
