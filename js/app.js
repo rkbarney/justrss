@@ -237,8 +237,6 @@
     const feed = feedMap[article?.feedId];
 
     el.addEventListener('click', (e) => {
-      if (el.classList.contains('swipe-left') || el.classList.contains('swipe-right')) return;
-      if (e.target.closest('.article-item-swipe-hint')) return;
       UI.saveScroll('all');
       Storage.markArticleRead(id, true);
       beforeArticleView = { view: 'all', feedId: currentFeedId };
@@ -247,14 +245,6 @@
       el.classList.remove('unread');
     });
 
-    UI.initSwipe(el, () => {
-      Storage.markArticleRead(id, true);
-      el.classList.remove('unread');
-      renderAll();
-    }, async () => {
-      await Storage.markArticleHidden(id, true);
-      renderAll();
-    });
   }
 
   let currentFeedId = null;
@@ -1530,13 +1520,6 @@
     installBtn?.addEventListener('click', doInstall);
   }
 
-  function wirePullToRefresh() {
-    const list = document.getElementById('view-all');
-    if (list) {
-      UI.initPullToRefresh(list, () => refreshAllFeeds());
-    }
-  }
-
   function wireLoadMore() {
     const limit = () => Storage.getSettings().postsPerPage || 15;
 
@@ -1620,7 +1603,6 @@
     wireArticleReader();
     wireSettings();
     wireShareAndInstall();
-    wirePullToRefresh();
 
     if (importParam !== null) await handleFeedShareImport(importParam);
 

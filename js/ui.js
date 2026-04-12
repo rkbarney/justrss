@@ -178,8 +178,6 @@ const UI = {
       el.setAttribute('role', 'listitem');
       el.dataset.articleId = a.id;
       el.innerHTML = `
-        <span class="article-item-swipe-hint left" aria-hidden="true">Read</span>
-        <span class="article-item-swipe-hint right" aria-hidden="true">Hide</span>
         <h2 class="article-item-title" dir="auto">${UI.escapeHtml(a.title)}</h2>
         <div class="article-item-meta">${metaParts.join(' · ')}</div>
       `;
@@ -276,54 +274,6 @@ const UI = {
     document.querySelectorAll('.header-nav-link[data-view]').forEach((n) => n.classList.remove('nav-active'));
   },
 
-  initSwipe(el, onSwipeLeft, onSwipeRight) {
-    let startX = 0;
-    el.addEventListener('touchstart', (e) => {
-      startX = e.touches[0].clientX;
-      el.classList.remove('swipe-left', 'swipe-right');
-    }, { passive: true });
-    el.addEventListener('touchend', (e) => {
-      const endX = e.changedTouches[0].clientX;
-      const dx = endX - startX;
-      if (Math.abs(dx) > 60) {
-        if (dx < 0) onSwipeLeft();
-        else onSwipeRight();
-      }
-      el.classList.remove('swipe-left', 'swipe-right');
-    }, { passive: true });
-    el.addEventListener('touchmove', (e) => {
-      const x = e.touches[0].clientX;
-      const dx = x - startX;
-      if (dx < -30) el.classList.add('swipe-left');
-      else if (dx > 30) el.classList.add('swipe-right');
-    }, { passive: true });
-  },
-
-  initPullToRefresh(container, onRefresh) {
-    let startY = 0;
-    const indicator = document.getElementById('pull-indicator');
-    container.addEventListener('touchstart', (e) => {
-      startY = e.touches[0].clientY;
-    }, { passive: true });
-    container.addEventListener('touchmove', (e) => {
-      // Use window.scrollY since the body is the actual scroll container for this view.
-      if (window.scrollY <= 0 && e.touches[0].clientY - startY > 40 && indicator) {
-        indicator.textContent = 'Release to refresh';
-        indicator.classList.add('pulling');
-      } else if (window.scrollY > 0 && indicator?.classList.contains('pulling')) {
-        // Cancel pull-to-refresh if the user has scrolled down from the top.
-        indicator.classList.remove('pulling');
-        indicator.textContent = '';
-      }
-    }, { passive: true });
-    container.addEventListener('touchend', () => {
-      if (indicator?.classList.contains('pulling')) {
-        indicator.classList.remove('pulling');
-        indicator.textContent = '';
-        onRefresh();
-      }
-    }, { passive: true });
-  },
 };
 
 window.UI = UI;
