@@ -264,24 +264,6 @@ body[data-nav-position="bottom"] .toast {
   display: flex;
 }
 
-.pull-indicator {
-  position: fixed;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%) translateY(-100%);
-  z-index: 20;
-  padding: 8px 12px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  transition: transform 0.2s;
-}
-
-.pull-indicator.pulling {
-  transform: translateX(-50%) translateY(0);
-}
-
 /* Article list */
 .article-list,
 .feed-list {
@@ -297,8 +279,6 @@ body[data-nav-position="bottom"] .toast {
   border-bottom: 1px solid var(--border);
   background: var(--bg-elevated);
   cursor: pointer;
-  overflow: hidden;
-  touch-action: pan-y;
 }
 
 .article-item:active {
@@ -327,40 +307,6 @@ body[data-nav-position="bottom"] .toast {
   color: var(--text-muted);
 }
 
-.article-item-swipe-hint {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 50px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.75rem;
-  pointer-events: none;
-  transition: transform 0.2s;
-}
-
-.article-item-swipe-hint.left {
-  left: 0;
-  background: var(--border);
-  color: var(--text);
-  transform: translateX(-100%);
-}
-
-.article-item-swipe-hint.right {
-  right: 0;
-  background: var(--border);
-  color: var(--text);
-  transform: translateX(100%);
-}
-
-.article-item.swipe-left .article-item-swipe-hint.left {
-  transform: translateX(0);
-}
-
-.article-item.swipe-right .article-item-swipe-hint.right {
-  transform: translateX(0);
-}
 
 #view-feeds {
   overflow-y: auto;
