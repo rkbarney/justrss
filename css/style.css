@@ -62,7 +62,7 @@ html {
   -webkit-tap-highlight-color: transparent;
   -webkit-text-size-adjust: 100%;
   overflow-x: hidden;
-  overscroll-behavior-y: contain;
+  overscroll-behavior-y: none;
 }
 
 body {
@@ -76,6 +76,7 @@ body {
   min-height: 100dvh;
   padding-bottom: 12px;
   overflow-x: hidden;
+  overscroll-behavior-y: none;
 }
 
 body[data-font-family="arial"] {
@@ -311,6 +312,7 @@ body[data-nav-position="bottom"] .toast {
 #view-feeds {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: none;
 }
 
 .feeds-add-sticky {
@@ -675,6 +677,7 @@ body[data-nav-position="bottom"] .toast {
   min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: none;
   padding: var(--padding-mobile);
   padding-bottom: 24px;
 }
@@ -755,6 +758,7 @@ body[data-nav-position="bottom"] .toast {
   padding: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: none;
 }
 
 .article-content {
@@ -927,6 +931,7 @@ body[data-nav-position="bottom"] .toast {
   max-width: 480px;
   max-height: 85vh;
   overflow-y: auto;
+  overscroll-behavior-y: none;
   background: var(--bg-elevated);
   border-bottom-left-radius: 12px;
   border-bottom-right-radius: 12px;
@@ -1001,6 +1006,7 @@ body[data-nav-position="bottom"] .toast {
 .add-feed-podcasts-results {
   max-height: 240px;
   overflow-y: auto;
+  overscroll-behavior-y: none;
   margin-top: 8px;
 }
 
@@ -1135,6 +1141,7 @@ body[data-nav-position="bottom"] .toast {
   max-width: 480px;
   max-height: 85vh;
   overflow-y: auto;
+  overscroll-behavior-y: none;
   background: var(--bg-elevated);
   border-bottom-left-radius: 12px;
   border-bottom-right-radius: 12px;
@@ -1170,6 +1177,7 @@ body[data-nav-position="bottom"] .toast {
   border: 1px solid var(--border);
   max-height: 320px;
   overflow-y: auto;
+  overscroll-behavior-y: none;
 }
 
 .share-feeds-item {
@@ -1255,6 +1263,7 @@ body[data-nav-position="bottom"] .toast {
   max-width: 480px;
   max-height: 85vh;
   overflow-y: auto;
+  overscroll-behavior-y: none;
   background: var(--bg-elevated);
   border-radius: 12px;
   padding: 20px;
@@ -1276,6 +1285,7 @@ body[data-nav-position="bottom"] .toast {
   padding: 0;
   max-height: 240px;
   overflow-y: auto;
+  overscroll-behavior-y: none;
   border: 1px solid var(--border);
 }
 
