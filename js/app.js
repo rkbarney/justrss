@@ -1269,7 +1269,6 @@
       const feed = feedMap[art.feedId];
       Storage.markArticleRead(art.id, true);
       UI.showArticle(art, feed, list, i);
-      renderAll();
     });
 
     document.getElementById('btn-next-article')?.addEventListener('click', () => {
@@ -1280,7 +1279,6 @@
       const feed = feedMap[art.feedId];
       Storage.markArticleRead(art.id, true);
       UI.showArticle(art, feed, list, i);
-      renderAll();
     });
   }
 
