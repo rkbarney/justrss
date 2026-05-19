@@ -286,7 +286,6 @@ const SETTINGS_KEY = 'justrss-settings';
 const DEFAULTS = {
   colorScheme: 'system',
   style: 'minimal',
-  refreshInterval: 30,
   postsPerPage: 15,
   feedOrder: 'alphabetical',
   navPosition: 'top',
