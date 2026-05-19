@@ -1261,7 +1261,7 @@
       }
     });
 
-    document.getElementById('btn-prev-article')?.addEventListener('click', () => {
+    document.getElementById('btn-prev-article')?.addEventListener('click', (e) => {
       const list = UI.currentArticleList;
       const i = UI.currentArticleIndex - 1;
       if (i < 0) return;
@@ -1269,9 +1269,10 @@
       const feed = feedMap[art.feedId];
       Storage.markArticleRead(art.id, true);
       UI.showArticle(art, feed, list, i);
+      e.currentTarget.blur();
     });
 
-    document.getElementById('btn-next-article')?.addEventListener('click', () => {
+    document.getElementById('btn-next-article')?.addEventListener('click', (e) => {
       const list = UI.currentArticleList;
       const i = UI.currentArticleIndex + 1;
       if (i >= list.length) return;
@@ -1279,6 +1280,7 @@
       const feed = feedMap[art.feedId];
       Storage.markArticleRead(art.id, true);
       UI.showArticle(art, feed, list, i);
+      e.currentTarget.blur();
     });
   }
 
