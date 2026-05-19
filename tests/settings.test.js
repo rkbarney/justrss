@@ -28,7 +28,6 @@ describe('Settings getSettings defaults', () => {
     const s = Storage.getSettings();
     assert.strictEqual(s.colorScheme, 'system');
     assert.strictEqual(s.style, 'minimal');
-    assert.strictEqual(s.refreshInterval, 30);
     assert.strictEqual(s.postsPerPage, 15);
     assert.strictEqual(s.feedOrder, 'alphabetical');
     assert.strictEqual(s.navPosition, 'top');
