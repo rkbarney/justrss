@@ -286,7 +286,6 @@ const SETTINGS_KEY = 'justrss-settings';
 const DEFAULTS = {
   colorScheme: 'system',
   style: 'minimal',
-  refreshInterval: 0,
   postsPerPage: 15,
   feedOrder: 'alphabetical',
   navPosition: 'top',
@@ -300,10 +299,6 @@ function getSettings() {
     delete merged.proxy;
     delete merged.proxySelfHosted;
     delete merged.proxyUrls;
-    // Migrate old auto-refresh default (30) to manual-only (0)
-    if (merged.refreshInterval === 30 && s.refreshInterval === 30) {
-      merged.refreshInterval = 0;
-    }
     // Migrate old theme to colorScheme + style
     if (s.theme && !s.colorScheme && !s.style) {
       const t = s.theme;

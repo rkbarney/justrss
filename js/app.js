@@ -22,7 +22,6 @@
 
   let feeds = [];
   let feedMap = {};
-  let refreshTimeout = null;
   let allArticles = [];
   let openAddFeedOnFeeds = false;
 
@@ -128,7 +127,6 @@
       await renderAll();
     }
     if (!onFeedsView) syncHashFromView();
-    scheduleRefresh();
     showToast(noCache ? 'Force refreshed' : 'Refreshed');
   }
 
@@ -169,14 +167,6 @@
       toast.classList.remove('visible');
       setTimeout(() => { toast.hidden = true; }, 200);
     }, durationMs);
-  }
-
-  function scheduleRefresh() {
-    if (refreshTimeout) clearTimeout(refreshTimeout);
-    const s = Storage.getSettings();
-    const mins = Number(s.refreshInterval) || 0;
-    if (mins <= 0) return;
-    refreshTimeout = setTimeout(() => refreshAllFeeds(), mins * 60 * 1000);
   }
 
   function getArticleOptions(overrides = {}) {
@@ -1289,7 +1279,6 @@
     document.getElementById('setting-color-scheme').value = s.colorScheme || 'system';
     document.getElementById('setting-style').value = s.style || 'minimal';
     document.getElementById('setting-nav-position').value = s.navPosition || 'top';
-    document.getElementById('setting-refresh').value = String(s.refreshInterval);
     document.getElementById('setting-posts-per-page').value = String(s.postsPerPage ?? 15);
     document.getElementById('setting-feed-order').value = s.feedOrder || 'alphabetical';
 
@@ -1307,11 +1296,6 @@
       s.navPosition = e.target.value;
       Storage.saveSettings(s);
       UI.setNavPosition(s.navPosition);
-    });
-    document.getElementById('setting-refresh')?.addEventListener('change', (e) => {
-      s.refreshInterval = Number(e.target.value);
-      Storage.saveSettings(s);
-      scheduleRefresh();
     });
     document.getElementById('setting-posts-per-page')?.addEventListener('change', (e) => {
       s.postsPerPage = Number(e.target.value);
@@ -1605,9 +1589,6 @@
     wireShareAndInstall();
 
     if (importParam !== null) await handleFeedShareImport(importParam);
-
-    if (feeds.length > 0) await refreshAllFeeds();
-    scheduleRefresh();
   }
 
   if (document.readyState === 'loading') {
