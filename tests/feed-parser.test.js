@@ -93,6 +93,33 @@ describe('FeedParser parseXML (RSS)', () => {
     assert.ok(typeof feed.items[0].published === 'number');
     assert.ok(feed.items[0].published > 0);
   });
+
+  it('derives a distinct uid per item from guid even when link is shared', () => {
+    const rss = `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+<channel>
+  <title>Podcast</title>
+  <link>https://show.example.com</link>
+  <item>
+    <title>Episode 1</title>
+    <link>https://show.example.com</link>
+    <guid>episode-1</guid>
+    <pubDate>Mon, 01 Jan 2024 12:00:00 GMT</pubDate>
+  </item>
+  <item>
+    <title>Episode 2</title>
+    <link>https://show.example.com</link>
+    <guid>episode-2</guid>
+    <pubDate>Tue, 02 Jan 2024 12:00:00 GMT</pubDate>
+  </item>
+</channel>
+</rss>`;
+    const feed = FeedParser.parseXML(rss);
+    assert.strictEqual(feed.items.length, 2);
+    assert.notStrictEqual(feed.items[0].uid, feed.items[1].uid);
+    assert.strictEqual(feed.items[0].uid, 'episode-1');
+    assert.strictEqual(feed.items[1].uid, 'episode-2');
+  });
 });
 
 describe('FeedParser parseXML (Atom)', () => {

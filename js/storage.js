@@ -158,8 +158,8 @@ async function getArticle(articleId) {
   });
 }
 
-function articleId(feedId, link) {
-  return btoa(encodeURIComponent(feedId + '|' + (link || ''))).replace(/[/+=]/g, '_').slice(0, 120);
+function articleId(feedId, key) {
+  return btoa(encodeURIComponent(feedId + '|' + (key || ''))).replace(/[/+=]/g, '_').slice(0, 120);
 }
 
 async function upsertArticles(feedId, items) {
@@ -168,7 +168,7 @@ async function upsertArticles(feedId, items) {
   const existingIds = new Set(existing.map((a) => a.id));
   const toPut = [];
   for (const item of items) {
-    const id = articleId(feedId, item.link);
+    const id = articleId(feedId, item.uid || item.link);
     const rec = {
       id,
       feedId,
