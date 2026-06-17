@@ -55,11 +55,12 @@ function parseRSS2JSON(data) {
       const enclosureUrl = (enc?.url || enc?.link || '').trim();
       const guid = (item.guid || '').trim();
       const itemLink = item.link || item.url || guid || '';
+      const itemTitle = item.title || '(No title)';
       return {
-        title: item.title || '(No title)',
+        title: itemTitle,
         link: itemLink,
         guid: (guid && guid.startsWith('http')) ? guid : undefined,
-        uid: guid || itemLink || enclosureUrl || item.title || '',
+        uid: guid || itemLink || enclosureUrl || itemTitle,
         content: item.content || item.description || '',
         published: item.pubDate ? new Date(item.pubDate).getTime() : Date.now(),
         author: item.author || '',
