@@ -158,17 +158,22 @@ async function getArticle(articleId) {
   });
 }
 
-function articleId(feedId, link) {
-  return btoa(encodeURIComponent(feedId + '|' + (link || ''))).replace(/[/+=]/g, '_').slice(0, 120);
+function articleId(feedId, key) {
+  return btoa(encodeURIComponent(feedId + '|' + (key || ''))).replace(/[/+=]/g, '_').slice(0, 120);
 }
 
 async function upsertArticles(feedId, items) {
   const database = await openDB();
   const existing = await getArticles({ feedId });
   const existingIds = new Set(existing.map((a) => a.id));
+  const linkCounts = {};
+  for (const item of items) {
+    if (item.link) linkCounts[item.link] = (linkCounts[item.link] || 0) + 1;
+  }
   const toPut = [];
   for (const item of items) {
-    const id = articleId(feedId, item.link);
+    const linkIsUnique = item.link && linkCounts[item.link] === 1;
+    const id = articleId(feedId, linkIsUnique ? item.link : (item.uid || item.link));
     const rec = {
       id,
       feedId,
