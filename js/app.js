@@ -502,13 +502,13 @@
         try {
           const discovered = await FeedParser.discoverFeedUrl(appleUrl, proxy);
           if (discovered && discovered !== feedUrl) {
+            parsed = await FeedParser.fetchAndParse(discovered, proxy);
+            feedUrl = discovered;
             const f = await Storage.getFeeds().then((list) => list.find((x) => x.id === feedId));
             if (f) {
               f.url = discovered;
               await Storage.updateFeed(f);
             }
-            parsed = await FeedParser.fetchAndParse(discovered, proxy);
-            feedUrl = discovered;
             break;
           }
         } catch {
@@ -521,13 +521,13 @@
         try {
           const discovered = await FeedParser.discoverFeedUrl(discoveryFallbackUrl, proxy);
           if (discovered && discovered !== feedUrl) {
+            parsed = await FeedParser.fetchAndParse(discovered, proxy);
+            feedUrl = discovered;
             const f = await Storage.getFeeds().then((list) => list.find((x) => x.id === feedId));
             if (f) {
               f.url = discovered;
               await Storage.updateFeed(f);
             }
-            parsed = await FeedParser.fetchAndParse(discovered, proxy);
-            feedUrl = discovered;
             break;
           }
         } catch {
